@@ -348,6 +348,7 @@ echo "Compiling the CUDA samples as a test..."
 if [[ -z "$CFG_QUICK" ]] && [[ ! -f "$CUDA_SAMPLES_COMPILED" ]]; then
 	(
 		cd "$CUDA_SAMPLES_DIR"
+		[[ -f "$CUDA_SAMPLES_DIR/0_Simple/cudaNvSci/Makefile" ]] && mv "$CUDA_SAMPLES_DIR/0_Simple/cudaNvSci/Makefile" "$CUDA_SAMPLES_DIR/0_Simple/cudaNvSci/Makefile.DISABLED"
 		set +u
 		source "$CUDA_ADD_PATH"
 		set -u
