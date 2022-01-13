@@ -11,5 +11,5 @@ export CFG_CUDNN_VERSION=8.1.1
 export CFG_CUDNN_URL='https://developer.nvidia.com/compute/machine-learning/cudnn/secure/8.1.1.33/11.2_20210301/cudnn-11.2-linux-x64-v8.1.1.33.tgz'
 
 # Run the main installation script
-"$SCRIPT_DIR/install_cuda.sh"
+"$SCRIPT_DIR/install-cuda.sh"
 # EOF

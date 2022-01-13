@@ -29,7 +29,7 @@ CFG_GCC_VERSION="${CFG_GCC_VERSION:-}"
 # Example: CFG_CUDA_URL='http://developer.download.nvidia.com/compute/cuda/10.1/Prod/local_installers/cuda_10.1.243_418.87.00_linux.run'
 
 # CUDA toolkit patch URLs to use (https://developer.nvidia.com/cuda-toolkit-archive -> CUDA Toolkit X.X -> Linux -> x86_64 -> Ubuntu -> UU.04 -> runfile (local))
-[[ -z "${CFG_CUDA_PATCH_URLS[@]}" ]] && CFG_CUDA_PATCH_URLS=()
+CFG_CUDA_PATCH_URLS="${CFG_CUDA_PATCH_URLS:-}"
 
 # cuDNN version and URL to use (https://developer.nvidia.com/rdp/cudnn-archive -> cuDNN vY.Y.Y for CUDA X.X -> cuDNN Library for Linux x86_64 (right-click) -> Copy link address)
 # Example: CFG_CUDNN_VERSION=7.6.5
@@ -50,7 +50,7 @@ echo "CFG_QUICK = $CFG_QUICK"
 echo "CFG_ROOT_DIR = $CFG_ROOT_DIR"
 echo "CFG_CUDA_VERSION = $CFG_CUDA_VERSION"
 echo "CFG_CUDA_URL = $CFG_CUDA_URL"
-echo "CFG_CUDA_PATCH_URLS = $(IFS=$'\n'; echo "${CFG_CUDA_PATCH_URLS[*]}")"
+echo "CFG_CUDA_PATCH_URLS = $CFG_CUDA_PATCH_URLS"
 echo "CFG_CUDNN_VERSION = $CFG_CUDNN_VERSION"
 echo "CFG_CUDNN_URL = $CFG_CUDNN_URL"
 echo "CFG_CUDA_NAME = $CFG_CUDA_NAME"
@@ -89,7 +89,15 @@ read -r -d '' UNINSTALLER_HEADER << EOM || true
 # Use bash strict mode
 set -euo pipefail
 EOM
-UNINSTALLER_CONTENTS="# EOF"
+read -r -d '' UNINSTALLER_CONTENTS << EOM || true
+# Remove this uninstaller script
+rm -rf '$UNINSTALLER_SCRIPT'
+rmdir --ignore-fail-on-non-empty '$UNINSTALLERS_DIR' || true
+# EOF
+EOM
+UNINSTALLER_CONTENTS=$'\n'"$UNINSTALLER_CONTENTS"
+echo "$UNINSTALLER_HEADER"$'\n'"$UNINSTALLER_CONTENTS" > "$UNINSTALLER_SCRIPT"
+chmod +x "$UNINSTALLER_SCRIPT"
 function add_uninstall_cmds()
 {
 	UNINSTALLER_CONTENTS=$'\n'"$1"$'\n'"$UNINSTALLER_CONTENTS"
@@ -113,18 +121,22 @@ echo
 # Variables
 INSTALLERS_DIR="$CFG_ROOT_DIR/Installers"
 CUDA_RUNFILE="$INSTALLERS_DIR/${CFG_CUDA_URL##*/}"
-declare -A CUDA_PATCH_RUNFILES
-for CUDA_PATCH_URL in "${CFG_CUDA_PATCH_URLS[@]}"; do
+CUDA_PATCH_URLS=($CFG_CUDA_PATCH_URLS)
+declare -A CUDA_PATCH_RUNFILES=()
+for CUDA_PATCH_URL in "${CUDA_PATCH_URLS[@]}"; do
 	CUDA_PATCH_RUNFILES[$CUDA_PATCH_URL]="$INSTALLERS_DIR/${CUDA_PATCH_URL##*/}"
 done
 CUDNN_TAR="$INSTALLERS_DIR/${CFG_CUDNN_URL##*/}"
 
 # Stage 1 uninstall
-CUDA_PATCH_RUNFILES_QUOTED="$(printf '"%s" ' "${CUDA_PATCH_RUNFILES[@]}")"
+CUDA_PATCH_RUNFILES_QUOTED=
+for CUDA_PATCH_RUNFILE in "${CUDA_PATCH_RUNFILES[@]}"; do
+	CUDA_PATCH_RUNFILES_QUOTED+="'$CUDA_PATCH_RUNFILE' "
+done
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 1:
-rm -rf "$CUDA_RUNFILE" $CUDA_PATCH_RUNFILES_QUOTED"$CUDNN_TAR"
-rmdir --ignore-fail-on-non-empty "$INSTALLERS_DIR" || true
+rm -rf '$CUDA_RUNFILE' $CUDA_PATCH_RUNFILES_QUOTED'$CUDNN_TAR'
+rmdir --ignore-fail-on-non-empty '$INSTALLERS_DIR' || true
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
@@ -171,11 +183,11 @@ LOCAL_CUDA_SYSTEM_DIR="$LOCAL_CUDA_DIR/system"
 LOCAL_CUDNN_DIR="$LOCAL_CUDA_DIR/cuDNN-$CFG_CUDNN_VERSION"
 
 # Stage 2 uninstall
-UNINSTALLER_COMMANDS='Commands to undo stage 2:'$'\n''(set +x; if [[ -x "'"$CUDA_INSTALL_DIR/bin/cuda-uninstaller"'" ]] && [[ -n "$(find /var/log/nvidia/.uninstallManifests -type f -name "uninstallManifest-*" -exec grep -F "'"$CUDA_INSTALL_DIR/"'" {} \+)" ]]; then sudo "'"$CUDA_INSTALL_DIR/bin/cuda-uninstaller"'"; else echo "Did not call CUDA uninstaller as no matching uninstaller/manifest was found"; fi;)'
+UNINSTALLER_COMMANDS='Commands to undo stage 2:'$'\n''(set +x; if [[ -x '"'$CUDA_INSTALL_DIR/bin/cuda-uninstaller'"' ]] && [[ -n "$(find /var/log/nvidia/.uninstallManifests -type f -name "uninstallManifest-*" -exec grep -F '"'$CUDA_INSTALL_DIR/'"' {} \+)" ]]; then sudo '"'$CUDA_INSTALL_DIR/bin/cuda-uninstaller'"'; else echo "Did not call CUDA uninstaller as no matching uninstaller/manifest was found"; fi;)'
 read -r -d '' UNINSTALLER_COMMANDS_EXTRA << EOM || true
-sudo rm -rf "$CUDA_INSTALL_DIR" "$LOCAL_CUDA_SYSTEM_DIR"
-rm -rf "$LOCAL_CUDA_DIR" "$LOCAL_CUDNN_DIR"
-rmdir --ignore-fail-on-non-empty "$MAIN_CUDA_DIR" || true
+sudo rm -rf '$CUDA_INSTALL_DIR' '$LOCAL_CUDA_SYSTEM_DIR'
+rm -rf '$LOCAL_CUDA_DIR' '$LOCAL_CUDNN_DIR'
+rmdir --ignore-fail-on-non-empty '$MAIN_CUDA_DIR' || true
 EOM
 UNINSTALLER_COMMANDS="$UNINSTALLER_COMMANDS"$'\n'"$UNINSTALLER_COMMANDS_EXTRA"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
@@ -379,9 +391,9 @@ CUDA_SAMPLES_COMPILED="$CUDA_SAMPLES_DIR/compiled"
 # Stage 3 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
-if [[ -f "$CUDA_ADD_PATH" ]]; then (set +ux; source "$CUDA_ADD_PATH"; set -ux; if cd "$CUDA_SAMPLES_DIR"; then make clean -j$(nproc) >/dev/null; fi;); fi
-rm -rf "$CUDA_SAMPLES_DIR/bin"
-rm -f "$CUDA_SAMPLES_COMPILED"
+if [[ -f '$CUDA_ADD_PATH' ]]; then (set +ux; source '$CUDA_ADD_PATH'; set -ux; if cd '$CUDA_SAMPLES_DIR'; then make clean -j$(nproc) >/dev/null; fi;); fi
+rm -rf '$CUDA_SAMPLES_DIR/bin'
+rm -f '$CUDA_SAMPLES_COMPILED'
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
@@ -393,6 +405,8 @@ if [[ -z "$CFG_QUICK" ]] && [[ ! -f "$CUDA_SAMPLES_COMPILED" ]]; then
 	(
 		cd "$CUDA_SAMPLES_DIR"
 		[[ -f "$CUDA_SAMPLES_DIR/0_Simple/cudaNvSci/Makefile" ]] && mv "$CUDA_SAMPLES_DIR/0_Simple/cudaNvSci/Makefile" "$CUDA_SAMPLES_DIR/0_Simple/cudaNvSci/Makefile.DISABLED"
+		[[ -f "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkan/Makefile" ]] && mv "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkan/Makefile" "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkan/Makefile.DISABLED"
+		[[ -f "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkanMMAP/Makefile" ]] && mv "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkanMMAP/Makefile" "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkanMMAP/Makefile.DISABLED"
 		set +u
 		source "$CUDA_ADD_PATH"
 		set -u
