@@ -391,7 +391,7 @@ CUDA_SAMPLES_COMPILED="$CUDA_SAMPLES_DIR/compiled"
 # Stage 3 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
-if [[ -f '$CUDA_ADD_PATH' ]]; then (set +ux; source '$CUDA_ADD_PATH'; set -ux; if cd '$CUDA_SAMPLES_DIR'; then make clean -j$(nproc) >/dev/null; fi;); fi
+if [[ -f '$CUDA_ADD_PATH' ]]; then (set +ux; source '$CUDA_ADD_PATH'; set -ux; if cd '$CUDA_SAMPLES_DIR'; then make clean -j'$(nproc)' >/dev/null; fi;); fi
 rm -rf '$CUDA_SAMPLES_DIR/bin'
 rm -f '$CUDA_SAMPLES_COMPILED'
 EOM
