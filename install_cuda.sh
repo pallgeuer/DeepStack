@@ -78,7 +78,19 @@ UNINSTALLERS_DIR="$CFG_ROOT_DIR/Uninstallers"
 UNINSTALLER_SCRIPT="$UNINSTALLERS_DIR/uninstall-$CFG_CUDA_NAME.sh"
 echo "Creating uninstaller script: $UNINSTALLER_SCRIPT"
 [[ ! -d "$UNINSTALLERS_DIR" ]] && mkdir "$UNINSTALLERS_DIR"
-echo "# EOF" > "$UNINSTALLER_SCRIPT"
+read -r -d '' UNINSTALLER_HEADER << EOM || true
+#!/bin/bash -x
+# Uninstall $CFG_CUDA_NAME
+
+# Use bash strict mode
+set -euo pipefail
+EOM
+UNINSTALLER_CONTENTS="# EOF"
+function add_uninstall_cmds()
+{
+	UNINSTALLER_CONTENTS=$'\n'"$1"$'\n'"$UNINSTALLER_CONTENTS"
+	echo "$UNINSTALLER_HEADER"$'\n'"$UNINSTALLER_CONTENTS" > "$UNINSTALLER_SCRIPT"
+}
 echo
 
 # Install system dependencies
@@ -100,14 +112,13 @@ CUDA_RUNFILE="$INSTALLERS_DIR/${CFG_CUDA_URL##*/}"
 CUDNN_TAR="$INSTALLERS_DIR/${CFG_CUDNN_URL##*/}"
 
 # Stage 1 uninstall
-UNINSTALLER_CONTENTS="$(cat "$UNINSTALLER_SCRIPT")"
-echo -en "\n# " > "$UNINSTALLER_SCRIPT"
-tee -a "$UNINSTALLER_SCRIPT" << EOM
+read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 1:
 rm -rf "$CUDA_RUNFILE" "$CUDNN_TAR"
 rmdir --ignore-fail-on-non-empty "$INSTALLERS_DIR" || true
 EOM
-echo "$UNINSTALLER_CONTENTS" >> "$UNINSTALLER_SCRIPT"
+add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+echo "$UNINSTALLER_COMMANDS"
 echo
 
 # Download installers
@@ -145,16 +156,15 @@ LOCAL_CUDA_SYSTEM_DIR="$LOCAL_CUDA_DIR/system"
 LOCAL_CUDNN_DIR="$LOCAL_CUDA_DIR/cuDNN-$CFG_CUDNN_VERSION"
 
 # Stage 2 uninstall
-UNINSTALLER_CONTENTS="$(cat "$UNINSTALLER_SCRIPT")"
-echo -en "\n# " > "$UNINSTALLER_SCRIPT"
-echo "Commands to undo stage 2:" | tee -a "$UNINSTALLER_SCRIPT"
-echo '(set +x; if [[ -x "'"$CUDA_INSTALL_DIR/bin/cuda-uninstaller"'" ]] && [[ -n "$(find /var/log/nvidia/.uninstallManifests -type f -name "uninstallManifest-*" -exec grep -F "'"$CUDA_INSTALL_DIR/"'" {} \+)" ]]; then sudo "'"$CUDA_INSTALL_DIR/bin/cuda-uninstaller"'"; else echo "Did not call CUDA uninstaller as no matching uninstaller/manifest was found"; fi;)' | tee -a "$UNINSTALLER_SCRIPT"
-tee -a "$UNINSTALLER_SCRIPT" << EOM
+UNINSTALLER_COMMANDS='Commands to undo stage 2:'$'\n''(set +x; if [[ -x "'"$CUDA_INSTALL_DIR/bin/cuda-uninstaller"'" ]] && [[ -n "$(find /var/log/nvidia/.uninstallManifests -type f -name "uninstallManifest-*" -exec grep -F "'"$CUDA_INSTALL_DIR/"'" {} \+)" ]]; then sudo "'"$CUDA_INSTALL_DIR/bin/cuda-uninstaller"'"; else echo "Did not call CUDA uninstaller as no matching uninstaller/manifest was found"; fi;)'
+read -r -d '' UNINSTALLER_COMMANDS_EXTRA << EOM || true
 sudo rm -rf "$CUDA_INSTALL_DIR" "$LOCAL_CUDA_SYSTEM_DIR"
 rm -rf "$LOCAL_CUDA_DIR" "$LOCAL_CUDNN_DIR"
 rmdir --ignore-fail-on-non-empty "$MAIN_CUDA_DIR" || true
 EOM
-echo "$UNINSTALLER_CONTENTS" >> "$UNINSTALLER_SCRIPT"
+UNINSTALLER_COMMANDS="$UNINSTALLER_COMMANDS"$'\n'"$UNINSTALLER_COMMANDS_EXTRA"
+add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+echo "$UNINSTALLER_COMMANDS"
 echo
 
 # Install CUDA toolkit
@@ -332,15 +342,14 @@ CUDA_SAMPLES_DIR="$(find "$LOCAL_CUDA_DIR" -type d -name "NVIDIA_CUDA-*_Samples"
 CUDA_SAMPLES_COMPILED="$CUDA_SAMPLES_DIR/compiled"
 
 # Stage 3 uninstall
-UNINSTALLER_CONTENTS="$(cat "$UNINSTALLER_SCRIPT")"
-echo -en "\n# " > "$UNINSTALLER_SCRIPT"
-tee -a "$UNINSTALLER_SCRIPT" << EOM
+read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
 if [[ -f "$CUDA_ADD_PATH" ]]; then (set +ux; source "$CUDA_ADD_PATH"; set -ux; if cd "$CUDA_SAMPLES_DIR"; then make clean -j$(nproc) >/dev/null; fi;); fi
 rm -rf "$CUDA_SAMPLES_DIR/bin"
 rm -f "$CUDA_SAMPLES_COMPILED"
 EOM
-echo "$UNINSTALLER_CONTENTS" >> "$UNINSTALLER_SCRIPT"
+add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+echo "$UNINSTALLER_COMMANDS"
 echo
 
 # Compile the CUDA samples
@@ -381,20 +390,6 @@ echo
 #
 # Finish
 #
-
-# Finalise uninstaller script
-echo "Finalising uninstaller script: $UNINSTALLER_SCRIPT"
-UNINSTALLER_CONTENTS="$(cat "$UNINSTALLER_SCRIPT")"
-cat << EOM > "$UNINSTALLER_SCRIPT"
-#!/bin/bash -x
-# Uninstall $CFG_CUDA_NAME
-
-# Use bash strict mode
-set -euo pipefail
-EOM
-echo "$UNINSTALLER_CONTENTS" >> "$UNINSTALLER_SCRIPT"
-chmod +x "$UNINSTALLER_SCRIPT"
-echo
 
 # Signal that the script completely finished
 echo "Finished CUDA stack installation"
