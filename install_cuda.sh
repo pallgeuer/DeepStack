@@ -28,6 +28,9 @@ CFG_GCC_VERSION="${CFG_GCC_VERSION:-}"
 # Example: CFG_CUDA_VERSION=10.1
 # Example: CFG_CUDA_URL='http://developer.download.nvidia.com/compute/cuda/10.1/Prod/local_installers/cuda_10.1.243_418.87.00_linux.run'
 
+# CUDA toolkit patch URLs to use (https://developer.nvidia.com/cuda-toolkit-archive -> CUDA Toolkit X.X -> Linux -> x86_64 -> Ubuntu -> UU.04 -> runfile (local))
+[[ -z "${CFG_CUDA_PATCH_URLS[@]}" ]] && CFG_CUDA_PATCH_URLS=()
+
 # cuDNN version and URL to use (https://developer.nvidia.com/rdp/cudnn-archive -> cuDNN vY.Y.Y for CUDA X.X -> cuDNN Library for Linux x86_64 (right-click) -> Copy link address)
 # Example: CFG_CUDNN_VERSION=7.6.5
 # Example: CFG_CUDNN_URL='https://developer.nvidia.com/compute/machine-learning/cudnn/secure/7.6.5.32/Production/10.1_20191031/cudnn-10.1-linux-x64-v7.6.5.32.tgz'
@@ -47,6 +50,7 @@ echo "CFG_QUICK = $CFG_QUICK"
 echo "CFG_ROOT_DIR = $CFG_ROOT_DIR"
 echo "CFG_CUDA_VERSION = $CFG_CUDA_VERSION"
 echo "CFG_CUDA_URL = $CFG_CUDA_URL"
+echo "CFG_CUDA_PATCH_URLS = $(IFS=$'\n'; echo "${CFG_CUDA_PATCH_URLS[*]}")"
 echo "CFG_CUDNN_VERSION = $CFG_CUDNN_VERSION"
 echo "CFG_CUDNN_URL = $CFG_CUDNN_URL"
 echo "CFG_CUDA_NAME = $CFG_CUDA_NAME"
@@ -109,12 +113,17 @@ echo
 # Variables
 INSTALLERS_DIR="$CFG_ROOT_DIR/Installers"
 CUDA_RUNFILE="$INSTALLERS_DIR/${CFG_CUDA_URL##*/}"
+declare -A CUDA_PATCH_RUNFILES
+for CUDA_PATCH_URL in "${CFG_CUDA_PATCH_URLS[@]}"; do
+	CUDA_PATCH_RUNFILES[$CUDA_PATCH_URL]="$INSTALLERS_DIR/${CUDA_PATCH_URL##*/}"
+done
 CUDNN_TAR="$INSTALLERS_DIR/${CFG_CUDNN_URL##*/}"
 
 # Stage 1 uninstall
+CUDA_PATCH_RUNFILES_QUOTED="$(printf '"%s" ' "${CUDA_PATCH_RUNFILES[@]}")"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 1:
-rm -rf "$CUDA_RUNFILE" "$CUDNN_TAR"
+rm -rf "$CUDA_RUNFILE" $CUDA_PATCH_RUNFILES_QUOTED"$CUDNN_TAR"
 rmdir --ignore-fail-on-non-empty "$INSTALLERS_DIR" || true
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
@@ -128,6 +137,12 @@ echo
 echo "Downloading CUDA $CFG_CUDA_VERSION..."
 [[ ! -f "$CUDA_RUNFILE" ]] && wget "$CFG_CUDA_URL" -P "$INSTALLERS_DIR"
 echo
+for CUDA_PATCH_URL in "${!CUDA_PATCH_RUNFILES[@]}"; do
+	CUDA_PATCH_RUNFILE="${CUDA_PATCH_RUNFILES[$CUDA_PATCH_URL]}"
+	echo "Downloading CUDA patch '$(basename "$CUDA_PATCH_RUNFILE")'..."
+	[[ ! -f "$CUDA_PATCH_RUNFILE" ]] && wget "$CUDA_PATCH_URL" -P "$INSTALLERS_DIR"
+	echo
+done
 echo "Downloading cuDNN $CFG_CUDNN_VERSION..."
 if [[ ! -f "$CUDNN_TAR" ]]; then
 	echo "Please log in with your NVIDIA account and don't close the browser..."
@@ -172,7 +187,6 @@ echo "Installing CUDA toolkit $CFG_CUDA_VERSION..."
 [[ ! -d "$MAIN_CUDA_DIR" ]] && mkdir "$MAIN_CUDA_DIR"
 if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
 	mkdir "$LOCAL_CUDA_DIR"
-	sudo rm -rf /var/log/cuda-installer.log
 	echo
 	echo "Please perform the following actions in the CUDA installer:"
 	echo " - Existing driver found: Select 'Continue'"
@@ -184,6 +198,7 @@ if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
 	echo
 	read -n 1 -p "Continue [ENTER] "
 	echo
+	sudo rm -rf /var/log/cuda-installer.log
 	sudo sh "$CUDA_RUNFILE" --toolkit --toolkitpath="$CUDA_INSTALL_DIR" --samples --samplespath="$LOCAL_CUDA_DIR" --librarypath="$LOCAL_CUDA_SYSTEM_DIR" --no-man-page --override
 	echo
 	echo "You can ignore the PATH / LD_LIBRARY_PATH advice above, and not worry about 'Incomplete installation"'!'"' as we already have our own NVIDIA driver installed"
@@ -191,14 +206,34 @@ if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
 	echo "Checking the installation log for anything suspicious..."
 	grep -Ei "\[(WARN|WARNING|ERROR)\]" /var/log/cuda-installer.log || true
 	grep -Ei " (installed|created directory)" /var/log/cuda-installer.log | grep -Fv " $CUDA_INSTALL_DIR/" | grep -Fv " $LOCAL_CUDA_SYSTEM_DIR/" | grep -Fv "$LOCAL_CUDA_DIR/" | grep -Fv /var/log/nvidia/.uninstallManifests/ || true
+	CUDA_LD_SO_CONF="$(grep -Eo "/etc/ld\.so\.conf\.d/cuda-.*.conf" /var/log/cuda-installer.log)"
 	echo
+	for CUDA_PATCH_RUNFILE in "${CUDA_PATCH_RUNFILES[@]}"; do
+		echo "Please perform the following actions in the CUDA patch '$(basename "$CUDA_PATCH_RUNFILE")' installer:"
+		echo " - Existing driver found: Select 'Continue'"
+		echo " - EULA: Type 'accept'"
+		echo " - CUDA Toolkit: Press 'a' and deselect all"
+		echo " - Select Install"
+		echo " - Select Upgrade all"
+		echo
+		read -n 1 -p "Continue [ENTER] "
+		echo
+		sudo rm -rf /var/log/cuda-installer.log
+		sudo sh "$CUDA_PATCH_RUNFILE" --toolkit --toolkitpath="$CUDA_INSTALL_DIR" --samples --samplespath="$LOCAL_CUDA_DIR" --librarypath="$LOCAL_CUDA_SYSTEM_DIR" --no-man-page --override
+		echo
+		echo "You can ignore the PATH / LD_LIBRARY_PATH advice above, and not worry about 'Incomplete installation"'!'"' as we already have our own NVIDIA driver installed"
+		echo
+		echo "Checking the installation log for anything suspicious..."
+		grep -Ei "\[(WARN|WARNING|ERROR)\]" /var/log/cuda-installer.log || true
+		grep -Ei " (installed|created directory)" /var/log/cuda-installer.log | grep -Fv " $CUDA_INSTALL_DIR/" | grep -Fv " $LOCAL_CUDA_SYSTEM_DIR/" | grep -Fv "$LOCAL_CUDA_DIR/" | grep -Fv /var/log/nvidia/.uninstallManifests/ || true
+		echo
+	done
 	echo "Performing CUDA post-installation clean-up steps..."
 	if [[ -d "$LOCAL_CUDA_SYSTEM_DIR" ]]; then
 		echo "Merging extra CUDA system stuff into: $CUDA_INSTALL_DIR"
 		sudo rsync -qaK "$LOCAL_CUDA_SYSTEM_DIR/" "$CUDA_INSTALL_DIR/"
 		sudo rm -rf "$LOCAL_CUDA_SYSTEM_DIR"
 	fi
-	CUDA_LD_SO_CONF="$(grep -Eo "/etc/ld\.so\.conf\.d/cuda-.*.conf" /var/log/cuda-installer.log)"
 	if [[ -n "$CUDA_LD_SO_CONF" ]] && [[ -f "$CUDA_LD_SO_CONF" ]]; then
 		echo "Removing ldconfig conf: $CUDA_LD_SO_CONF"
 		sudo rm -rf "$CUDA_LD_SO_CONF"
