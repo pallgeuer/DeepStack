@@ -1,5 +1,8 @@
 #!/bin/bash -i
 # Install PyTorch into a conda environment
+# Alternatively if you're looking into having a Docker build of PyTorch:
+#   https://github.com/veritas9872/PyTorch-Universal-Docker-Template  [OLD NAME]
+#   https://github.com/veritas9872/Cresset                            [NEW NAME]
 
 # Use bash strict mode
 set -euo pipefail
@@ -37,6 +40,7 @@ CFG_OPENCV_VERSION="${CFG_OPENCV_VERSION:-$CFG_OPENCV_TAG}"
 
 # Name to use for the created conda environment
 CFG_CONDA_ENV="${CFG_CONDA_ENV:-$CFG_CUDA_NAME-$CFG_PYTORCH_NAME}"
+CFG_CONDA_CREATE="${CFG_CONDA_CREATE:-true}"  # Set this to anything other than "true" to not attempt environment creation (environment must already exist and be appropriately configured)
 
 # Python version to use for the created conda environment (see https://github.com/pytorch/vision#installation for compatibility)
 # Example: CFG_CONDA_PYTHON=3.9
@@ -47,6 +51,8 @@ cd "$CFG_ROOT_DIR"
 # Clean up configuration variables
 CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
+CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
+[[ "$CFG_CONDA_CREATE" != "true" ]] && CFG_CONDA_CREATE="false"
 
 # Display the configuration
 echo
@@ -62,6 +68,7 @@ echo "CFG_TORCHVISION_TAG = $CFG_TORCHVISION_TAG"
 echo "CFG_TORCHVISION_VERSION = $CFG_TORCHVISION_VERSION"
 echo "CFG_OPENCV_TAG = $CFG_OPENCV_TAG"
 echo "CFG_OPENCV_VERSION = $CFG_OPENCV_VERSION"
+echo "CFG_CONDA_CREATE = $CFG_CONDA_CREATE"
 echo "CFG_CONDA_ENV = $CFG_CONDA_ENV"
 echo "CFG_CONDA_PYTHON = $CFG_CONDA_PYTHON"
 echo
@@ -106,7 +113,8 @@ echo
 
 # Install system dependencies
 echo "Installing various system dependencies..."
-# TODO: sudo apt install BLAH
+sudo apt install fftw3 fftw3-dev
+sudo apt install protobuf-compiler libprotobuf-dev
 echo
 
 #
@@ -145,7 +153,7 @@ if [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
 		git submodule sync
 		git submodule update --init --recursive
 		git submodule status
-		# TODO: Fix bad things about the PyTorch repo
+		# TODO: Fix bad things about the PyTorch repo (IF ANY => TORCH_CUDA_ARCH_LIST)
 	)
 fi
 echo
@@ -182,77 +190,194 @@ echo
 #
 
 # Stage 2 uninstall
-read -r -d '' UNINSTALLER_COMMANDS << EOM || true
-Commands to undo stage 3:
-conda env remove -n '$CFG_CONDA_ENV'
-conda clean --all
-EOM
+UNINSTALLER_COMMANDS="Commands to undo stage 2:"
+[[ "$CFG_CONDA_CREATE" == "true" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda env remove -n '$CFG_CONDA_ENV'"
+UNINSTALLER_COMMANDS+=$'\n'"conda clean --all"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
 
 # Create conda environment
 echo "Creating conda environment..."
-set +u
-find "$(conda info --base)"/envs -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | grep -Fq "$CFG_CONDA_ENV" || conda create -n "$CFG_CONDA_ENV" python="$CFG_CONDA_PYTHON"
+if [[ "$CFG_CONDA_CREATE" != "true" ]] || find "$(conda info --base)"/envs -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | grep -Fq "$CFG_CONDA_ENV"; then
+	echo "Using already-configured conda environment $CFG_CONDA_ENV without installing any further packages"
+	CREATED_CONDA_ENV=
+else
+	echo "If you want an existing conda environment to be used instead, then create and configure the environment and pass its name as CFG_CONDA_ENV and set CFG_CONDA_CREATE=false"
+	set +u
+	conda create -n "$CFG_CONDA_ENV" python="$CFG_CONDA_PYTHON"
+	set -u
+	CREATED_CONDA_ENV=true
+fi
+echo
+
+# Configure conda activation scripts
+CONDA_ENV_DIR="$(readlink -e "$(dirname "$CONDA_EXE")/../envs/$CFG_CONDA_ENV")"
+if [[ ! -d "$CONDA_ENV_DIR" ]]; then
+	echo "Not a directory: $CONDA_ENV_DIR"
+	exit 1
+fi
+if [[ -n "$CREATED_CONDA_ENV" ]]; then
+echo "Configuring conda environment activation scripts..."
+mkdir -p "$CONDA_ENV_DIR/etc/conda/activate.d"
+mkdir -p "$CONDA_ENV_DIR/etc/conda/deactivate.d"
+cat << 'EOM' > "$CONDA_ENV_DIR/etc/conda/activate.d/pythonpath.sh"
+#!/bin/sh
+# The environment name is available under $CONDA_DEFAULT_ENV
+if [ -n "$PYTHONPATH" ]; then
+	export SUPPRESSED_PYTHONPATH="$PYTHONPATH"
+	unset PYTHONPATH
+fi
+# EOF
+EOM
+cat << 'EOM' > "$CONDA_ENV_DIR/etc/conda/deactivate.d/pythonpath.sh"
+#!/bin/sh
+# The environment name is available under $CONDA_DEFAULT_ENV
+if [ -n "$SUPPRESSED_PYTHONPATH" ]; then
+	export PYTHONPATH="$SUPPRESSED_PYTHONPATH"
+	unset SUPPRESSED_PYTHONPATH
+fi
+# EOF
+EOM
+cat << EOM > "$CONDA_ENV_DIR/etc/conda/activate.d/env_vars.sh"
+#!/bin/sh
+source '$CUDA_INSTALL_DIR/add_path.sh'
+# EOF
+EOM
+cat << EOM > "$CONDA_ENV_DIR/etc/conda/deactivate.d/env_vars.sh"
+#!/bin/sh
+source '$CUDA_INSTALL_DIR/remove_path.sh'
+# EOF
+EOM
+chmod +x "$CONDA_ENV_DIR/etc/conda/activate.d/pythonpath.sh" "$CONDA_ENV_DIR/etc/conda/deactivate.d/pythonpath.sh" "$CONDA_ENV_DIR/etc/conda/activate.d/env_vars.sh" "$CONDA_ENV_DIR/etc/conda/deactivate.d/env_vars.sh"
+echo
+fi
+
+# Activate the conda environment
 echo "Activating $CFG_CONDA_ENV conda environment..."
+set +u
 conda activate "$CFG_CONDA_ENV"
 set -u
 echo
 
-# TODO: Do NOT make the environment anaconda-based to avoid bloat...
-# TODO: Set up the conda environment with all the packages it will need for all the remaining stages
-# TODO: Recall that you shouldn't install libprotobuf prior to OpenCV compilation in case you need to install that at all
+# Install conda packages
+if [[ -n "$CREATED_CONDA_ENV" ]]; then
+	echo "Installing conda packages..."
+	set +u
+	conda config --env --append channels conda-forge
+	conda config --env --append channels pytorch
+	conda config --env --set channel_priority strict
+	conda install ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
+	conda install astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pybind11 pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
+	conda install decorator appdirs mako numpy six  # For pip packages
+	conda install --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
+	CERES_EIGEN_VERSION="$(grep -oP '(?<=set\(CERES_EIGEN_VERSION)\s+[0-9.]+\s*(?=\))' "$CONDA_ENV_DIR/lib/cmake/Ceres/CeresConfig.cmake")"
+	CERES_EIGEN_VERSION="${CERES_EIGEN_VERSION// /}"
+	if [[ -n "$CERES_EIGEN_VERSION" ]]; then
+		conda config --env --set channel_priority flexible
+		conda install eigen="$CERES_EIGEN_VERSION"
+	else
+		echo "Failed to parse Eigen version required by Ceres"
+		exit 1
+	fi
+	conda clean --all
+	set -u
+	[[ -f "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh"
+	[[ -f "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_deactivate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh"
+	echo
+	echo "Installing pip packages..."
+	pip install --no-deps pycuda pytools
+	echo
+	echo "Performing pip check..."
+	pip check
+	echo
+fi
+
+# Reactivate the conda environment
+echo "Reactivating $CFG_CONDA_ENV conda environment..."
+set +u
+conda deactivate
+conda activate "$CFG_CONDA_ENV"
+set -u
+echo
 
 #
 # Stage 3
 #
 
-# TODO: Make and install OpenCV (no need to be independent, think RPATH)
+# Variables
+OPENCV_BUILD_DIR="$OPENCV_GIT_DIR/build"
+
+# Stage 3 uninstall
+read -r -d '' UNINSTALLER_COMMANDS << EOM || true
+Commands to undo stage 3:
+if [[ -d '$OPENCV_BUILD_DIR' ]]; then cd '$OPENCV_BUILD_DIR'; make uninstall; make clean; elif [[ -f '$OPENCV_GIT_DIR/install_manifest.txt' ]]; then echo 'You will need to check the install manifest and uninstall manually: $OPENCV_GIT_DIR/install_manifest.txt'; fi
+rm -rf '$OPENCV_BUILD_DIR' '$OPENCV_GIT_DIR/.cache' 
+EOM
+add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+echo "$UNINSTALLER_COMMANDS"
+echo
+
+# Build OpenCV
+echo "Building OpenCV $CFG_OPENCV_VERSION..."
+if [[ ! -f "$CONDA_PREFIX/bin/opencv_version" ]]; then
+	(
+		[[ ! -d "$OPENCV_BUILD_DIR" ]] && mkdir "$OPENCV_BUILD_DIR"
+		rm -rf "$OPENCV_BUILD_DIR"/*
+		cd "$OPENCV_BUILD_DIR"
+		set +u
+		conda activate "$CFG_CONDA_ENV"
+		set -u
+		export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
+		cmake -DCMAKE_INSTALL_PREFIX="$CONDA_PREFIX" -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 -DBUILD_SHARED_LIBS=ON -DENABLE_CONFIG_VERIFICATION=ON -DOPENCV_ENABLE_NONFREE=ON -DENABLE_FAST_MATH=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_DOCS=OFF -DBUILD_opencv_apps=ON -DPYTHON_DEFAULT_EXECUTABLE="$CONDA_PREFIX/bin/python" -DPYTHON3_EXECUTABLE="$CONDA_PREFIX/bin/python" -DBUILD_opencv_python2=OFF -DBUILD_opencv_python3=ON -DBUILD_opencv_java=OFF -DWITH_MATLAB=OFF -DWITH_IMGCODEC_HDR=ON -DWITH_IMGCODEC_SUNRASTER=ON -DWITH_IMGCODEC_PXM=ON -DWITH_IMGCODEC_PFM=ON -DWITH_ADE=ON -DWITH_PNG=ON -DWITH_JPEG=ON -DWITH_TIFF=ON -DWITH_WEBP=ON -DWITH_OPENJPEG=ON -DWITH_JASPER=OFF -DWITH_OPENEXR=ON -DBUILD_OPENEXR=ON -DWITH_TESSERACT=OFF -DWITH_V4L=OFF -DWITH_FFMPEG=ON -DWITH_GSTREAMER=ON -DWITH_1394=ON -DWITH_OPENGL=ON -DOpenGL_GL_PREFERENCE=LEGACY -DWITH_VTK=OFF -DWITH_GTK=OFF -DWITH_QT=ON -DWITH_PTHREADS_PF=ON -DWITH_TBB=ON -DWITH_OPENMP=ON -DWITH_CUDA=ON -DCUDA_GENERATION=Auto -DCUDA_FAST_MATH=OFF -DWITH_CUDNN=ON -DWITH_CUFFT=ON -DWITH_CUBLAS=ON -DWITH_OPENCL=ON -DWITH_OPENCLAMDFFT=OFF -DWITH_OPENCLAMDBLAS=OFF -DWITH_VA=ON -DWITH_VA_INTEL=ON -DWITH_PROTOBUF=ON -DBUILD_PROTOBUF=ON -DPROTOBUF_UPDATE_FILES=OFF -DOPENCV_DNN_CUDA=ON -DOPENCV_DNN_OPENCL=ON -DWITH_EIGEN=ON -DWITH_LAPACK=ON -DWITH_QUIRC=ON ..
+		time make -j"$(nproc)"
+		echo
+		echo "Checking which external libraries the build products dynamically link to..."
+		find "$OPENCV_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$OPENCV_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
+		echo
+		echo "Installing OpenCV into conda environment..."
+		make install
+		cp "$OPENCV_BUILD_DIR/install_manifest.txt" "$OPENCV_GIT_DIR/install_manifest.txt"
+		echo
+		echo "Running opencv_version script and showing build information..."
+		"$OPENCV_BUILD_DIR/bin/opencv_version"
+		python -c "import cv2; print('Found Python OpenCV', cv2.__version__); print(cv2.getBuildInformation())"
+		echo "Removing build products..."
+		rm -rf "$OPENCV_BUILD_DIR" "$OPENCV_GIT_DIR/.cache"
+	)
+fi
+echo
 
 #
 # Stage 4
 #
 
+# Variables
+# TODO: PYTORCH_BUILD_DIR
+
+# Stage 4 uninstall
+# TODO
+
+# Build PyTorch
 # TODO: Make and install PyTorch (build protobuf)
+# TODO: Fix for annoying PyTorch 1.9.0 stuff?
+# TODO: --debug-find to check libs (need INJECT_CMAKE_ARGS for that??)
+# TODO: pip uninstall torch || true first
 
 #
 # Stage 5
 #
 
+# Variables
+# TODO: TORCHVISION_BUILD_DIR
+
+# Stage 5 uninstall
+# TODO
+
+# Build Torchvision
 # TODO: Make and install Torchvision (verify that this doesn't end up using a system protobuf version)
-
-
-
-
-
-
-
-
-
-
-exit 1  # TODO: TEMP
-
-# Stage 1 uninstall
-echo "Commands to undo stage 1:"
-echo "conda env remove -n $CFG_CONDA_ENV"
-echo
-
-
-
-# TODO: Need to manually perform PYTHONPATH suppression on the conda environment!
-# TODO: Activating and deactivating the environment should also select the appropriate CUDA installation
-# TODO: CONTINUE
-
-
-
-
-
-
-
-
-
-
+# TODO: pip uninstall torchvision || true first
+# TODO: --debug-find to check libs (need INJECT_CMAKE_ARGS for that??)
 
 #
 # Finish
