@@ -72,6 +72,12 @@ echo
 if [[ "$CFG_MAX_GCC_VERSION" -gt 0 ]] && [[ ! -v CC ]] && [[ ! -v CXX ]] && [[ "$(c++ --version 2>/dev/null | head -n1 | cut -d' ' -f1)" == "c++" ]] && [[ "$(c++ -dumpversion)" -gt "$CFG_MAX_GCC_VERSION" ]]; then
 	GCC_PATH="/usr/bin/gcc-$CFG_MAX_GCC_VERSION"
 	GXX_PATH="/usr/bin/g++-$CFG_MAX_GCC_VERSION"
+	if [[ ! -f "$GCC_PATH" ]] || [[ ! -f "$GXX_PATH" ]]; then
+		echo "The following GCC binaries (or older) are required for this CUDA version, but cannot be found:"
+		echo "$GCC_PATH"
+		echo "$GXX_PATH"
+		exit 1
+	fi
 else
 	GCC_PATH=
 	GXX_PATH=
