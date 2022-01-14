@@ -21,8 +21,8 @@ CFG_ROOT_DIR="${CFG_ROOT_DIR:-$SCRIPT_DIR}"
 CFG_CUDA_NAME="${CFG_CUDA_NAME:-cuda-$CFG_CUDA_VERSION}"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION:-/usr/local}"
 
-# Custom GCC compiler to use (if specified)
-CFG_GCC_VERSION="${CFG_GCC_VERSION:-}"
+# Maximum GCC major compiler version to use (if specified, try: grep "#error" /usr/local/cuda-X.X/targets/x86_64-linux/include/crt/host_config.h)
+CFG_MAX_GCC_VERSION="${CFG_MAX_GCC_VERSION:-}"
 
 # CUDA toolkit version and URL to use (https://developer.nvidia.com/cuda-toolkit-archive -> CUDA Toolkit X.X -> Linux -> x86_64 -> Ubuntu -> UU.04 -> runfile (local))
 # Example: CFG_CUDA_VERSION=10.1
@@ -55,7 +55,7 @@ echo "CFG_CUDNN_VERSION = $CFG_CUDNN_VERSION"
 echo "CFG_CUDNN_URL = $CFG_CUDNN_URL"
 echo "CFG_CUDA_NAME = $CFG_CUDA_NAME"
 echo "CFG_CUDA_LOCATION = $CFG_CUDA_LOCATION"
-echo "CFG_GCC_VERSION = $CFG_GCC_VERSION"
+echo "CFG_MAX_GCC_VERSION = $CFG_MAX_GCC_VERSION"
 echo
 read -n 1 -p "Continue [ENTER] "
 echo
@@ -69,9 +69,9 @@ echo "Starting CUDA stack installation..."
 echo
 
 # Dependent variables
-if [[ -n "$CFG_GCC_VERSION" ]]; then
-	GCC_PATH="/usr/bin/gcc-$CFG_GCC_VERSION"
-	GXX_PATH="/usr/bin/g++-$CFG_GCC_VERSION"
+if [[ "$CFG_MAX_GCC_VERSION" -gt 0 ]] && [[ ! -v CC ]] && [[ ! -v CXX ]] && [[ "$(c++ --version 2>/dev/null | head -n1 | cut -d' ' -f1)" == "c++" ]] && [[ "$(c++ -dumpversion)" -gt "$CFG_MAX_GCC_VERSION" ]]; then
+	GCC_PATH="/usr/bin/gcc-$CFG_MAX_GCC_VERSION"
+	GXX_PATH="/usr/bin/g++-$CFG_MAX_GCC_VERSION"
 else
 	GCC_PATH=
 	GXX_PATH=

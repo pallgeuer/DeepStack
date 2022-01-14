@@ -200,8 +200,6 @@ conda activate "$CFG_CONDA_ENV"
 set -u
 echo
 
-# TODO: Program that the GCC version specification is a MAX only if the GCC version that would otherwise be chosen is higher!!!! Then go through and specify the max GCC version for all the CUDA install scripts
-
 # TODO: Do NOT make the environment anaconda-based to avoid bloat...
 # TODO: Set up the conda environment with all the packages it will need for all the remaining stages
 # TODO: Recall that you shouldn't install libprotobuf prior to OpenCV compilation in case you need to install that at all

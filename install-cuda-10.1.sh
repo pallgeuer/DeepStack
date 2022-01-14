@@ -5,7 +5,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Configuration
-export CFG_GCC_VERSION=8
+export CFG_MAX_GCC_VERSION=8
 export CFG_CUDA_VERSION=10.1
 export CFG_CUDA_URL='http://developer.download.nvidia.com/compute/cuda/10.1/Prod/local_installers/cuda_10.1.243_418.87.00_linux.run'
 export CFG_CUDNN_VERSION=7.6.5
