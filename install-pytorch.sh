@@ -89,7 +89,7 @@ UNINSTALLER_SCRIPT="$UNINSTALLERS_DIR/uninstall-$CFG_CONDA_ENV.sh"
 echo "Creating uninstaller script: $UNINSTALLER_SCRIPT"
 [[ ! -d "$UNINSTALLERS_DIR" ]] && mkdir "$UNINSTALLERS_DIR"
 read -r -d '' UNINSTALLER_HEADER << EOM || true
-#!/bin/bash -x
+#!/bin/bash -ix
 # Uninstall $CFG_CONDA_ENV
 
 # Use bash strict mode
@@ -114,6 +114,8 @@ echo
 # Install system dependencies
 echo "Installing various system dependencies..."
 sudo apt install fftw3 fftw3-dev
+sudo apt install libnuma-dev
+sudo apt install openmpi-bin libopenmpi-dev
 sudo apt install protobuf-compiler libprotobuf-dev
 echo
 
@@ -146,14 +148,16 @@ echo
 echo "Cloning PyTorch $CFG_PYTORCH_VERSION..."
 if [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
 	(
+		set -x
 		cd "$MAIN_PYTORCH_DIR"
 		git clone --recursive -j"$(nproc)" https://github.com/pytorch/pytorch pytorch
 		cd "$PYTORCH_GIT_DIR"
+		git checkout "$CFG_PYTORCH_TAG"
 		git checkout --recurse-submodules "$CFG_PYTORCH_TAG"
 		git submodule sync
 		git submodule update --init --recursive
 		git submodule status
-		# TODO: Fix bad things about the PyTorch repo (IF ANY => TORCH_CUDA_ARCH_LIST)
+		[[ -f "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc" ]] && sed -i 's/TORCH_WARN("Leaking Caffe2 thread-pool after fork.");/;/g' "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc"
 	)
 fi
 echo
@@ -190,9 +194,9 @@ echo
 #
 
 # Stage 2 uninstall
-UNINSTALLER_COMMANDS="Commands to undo stage 2:"
-[[ "$CFG_CONDA_CREATE" == "true" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda env remove -n '$CFG_CONDA_ENV'"
-UNINSTALLER_COMMANDS+=$'\n'"conda clean --all"
+UNINSTALLER_COMMANDS="Commands to undo stage 2:"$'\n'"set +ux"
+[[ "$CFG_CONDA_CREATE" == "true" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda deactivate"$'\n'"conda env remove -n '$CFG_CONDA_ENV'"
+UNINSTALLER_COMMANDS+=$'\n'"conda clean --all"$'\n'"set -ux"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
@@ -286,7 +290,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	[[ -f "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_deactivate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh"
 	echo
 	echo "Installing pip packages..."
-	pip install --no-deps pycuda pytools
+	pip install --no-deps --no-cache-dir pycuda pytools
 	echo
 	echo "Performing pip check..."
 	pip check
@@ -311,8 +315,8 @@ OPENCV_BUILD_DIR="$OPENCV_GIT_DIR/build"
 # Stage 3 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
-if [[ -d '$OPENCV_BUILD_DIR' ]]; then cd '$OPENCV_BUILD_DIR'; make uninstall; make clean; elif [[ -f '$OPENCV_GIT_DIR/install_manifest.txt' ]]; then echo 'You will need to check the install manifest and uninstall manually: $OPENCV_GIT_DIR/install_manifest.txt'; fi
-rm -rf '$OPENCV_BUILD_DIR' '$OPENCV_GIT_DIR/.cache' 
+if [[ -d '$OPENCV_BUILD_DIR' ]]; then ( cd '$OPENCV_BUILD_DIR'; make uninstall; make clean; ) elif [[ -f '$OPENCV_GIT_DIR/install_manifest.txt' ]]; then echo 'You will need to check the install manifest and uninstall manually: $OPENCV_GIT_DIR/install_manifest.txt'; fi
+rm -rf '$OPENCV_BUILD_DIR' '$OPENCV_GIT_DIR/.cache'
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
@@ -353,31 +357,126 @@ echo
 #
 
 # Variables
-# TODO: PYTORCH_BUILD_DIR
+PYTORCH_BUILD_DIR="$PYTORCH_GIT_DIR/build"
 
 # Stage 4 uninstall
-# TODO
+read -r -d '' UNINSTALLER_COMMANDS << EOM || true
+Commands to undo stage 4:
+set +ux
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torch || true; cd '$PYTORCH_GIT_DIR' && python setup.py clean || true; )
+set -ux
+rm -rf '$PYTORCH_BUILD_DIR' '$PYTORCH_GIT_DIR/torch.egg-info'
+EOM
+add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+echo "$UNINSTALLER_COMMANDS"
+echo
 
 # Build PyTorch
-# TODO: Make and install PyTorch (build protobuf)
-# TODO: Fix for annoying PyTorch 1.9.0 stuff?
-# TODO: --debug-find to check libs (need INJECT_CMAKE_ARGS for that??)
-# TODO: pip uninstall torch || true first
+echo "Building PyTorch $CFG_PYTORCH_VERSION..."
+if find "$CONDA_ENV_DIR/lib" -type d -path "python*/site-packages/torch" -exec false {} +; then
+	(
+		[[ ! -d "$PYTORCH_BUILD_DIR" ]] && mkdir "$PYTORCH_BUILD_DIR"
+		rm -rf "$PYTORCH_BUILD_DIR"/*
+		cd "$PYTORCH_GIT_DIR"
+		set +u
+		conda activate "$CFG_CONDA_ENV"
+		set -u
+		export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
+		export BUILD_BINARY=ON BUILD_TEST=OFF BUILD_DOCS=OFF BUILD_SHARED_LIBS=ON BUILD_CUSTOM_PROTOBUF=ON
+		export USE_CUDNN=ON USE_FFMPEG=ON USE_GFLAGS=ON USE_GLOG=ON USE_OPENCV=ON
+		while ! time python setup.py build; do
+			response=
+			echo
+			read -p "Try build again (y/N)? " response 2>&1
+			response="${response,,}"
+			[[ "$response" != "y" ]] && exit 1
+			echo
+		done
+		echo
+		echo "Checking which external libraries the build products dynamically link to..."
+		find "$PYTORCH_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$PYTORCH_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
+		echo
+		echo "Installing PyTorch into conda environment..."
+		pip uninstall torch || true
+		python setup.py install
+		echo
+		echo "Checking PyTorch is available in python..."
+		python - << EOM
+import torch
+print("Number of devices:", torch.cuda.device_count())
+print("Current device number:", torch.cuda.current_device())
+print("Current device:", torch.cuda.device(torch.cuda.current_device()))
+print("Device name:", torch.cuda.get_device_name(torch.cuda.current_device()))
+print("CUDA available:", torch.cuda.is_available())
+import pprint
+pprint.pprint({
+	'version': torch.version.__version__,
+	'commit': torch.version.git_version,
+	'debug': torch.version.debug,
+	'compiled_with': {'cuda': torch.version.cuda, 'cudnn': torch.backends.cudnn.version(), 'nccl': torch.cuda.nccl.version()},
+	'backends': {'cuDNN': torch.backends.cudnn.is_available(), 'OpenMP': torch.backends.openmp.is_available(), 'MKL': torch.backends.mkl.is_available(), 'MKL-DNN': torch.backends.mkldnn.is_available()}
+})
+print(torch.rand(5, 3))
+EOM
+		echo
+		echo "Removing build directory..."
+		rm -rf "$PYTORCH_BUILD_DIR"
+	)
+fi
+echo
 
 #
 # Stage 5
 #
 
 # Variables
-# TODO: TORCHVISION_BUILD_DIR
+TORCHVISION_BUILD_DIR="$TORCHVISION_GIT_DIR/build"
 
 # Stage 5 uninstall
-# TODO
+read -r -d '' UNINSTALLER_COMMANDS << EOM || true
+Commands to undo stage 5:
+set +ux
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchvision || true; cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
+set -ux
+rm -rf '$TORCHVISION_BUILD_DIR'
+EOM
+add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+echo "$UNINSTALLER_COMMANDS"
+echo
 
 # Build Torchvision
-# TODO: Make and install Torchvision (verify that this doesn't end up using a system protobuf version)
-# TODO: pip uninstall torchvision || true first
-# TODO: --debug-find to check libs (need INJECT_CMAKE_ARGS for that??)
+echo "Building Torchvision $CFG_TORCHVISION_VERSION..."
+if find "$CONDA_ENV_DIR/lib" -type d -path "python*/site-packages/torchvision" -exec false {} +; then
+	(
+		[[ ! -d "$TORCHVISION_BUILD_DIR" ]] && mkdir "$TORCHVISION_BUILD_DIR"
+		rm -rf "$TORCHVISION_BUILD_DIR"/*
+		cd "$TORCHVISION_GIT_DIR"
+		set +u
+		conda activate "$CFG_CONDA_ENV"
+		set -u
+		export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
+		export FORCE_CUDA=ON
+		while ! time python setup.py build; do
+			response=
+			echo
+			read -p "Try build again (y/N)? " response 2>&1
+			response="${response,,}"
+			[[ "$response" != "y" ]] && exit 1
+			echo
+		done
+		echo
+		echo "Checking which external libraries the build products dynamically link to..."
+		find "$TORCHVISION_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHVISION_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
+		echo
+		echo "Installing Torchvision into conda environment..."
+		pip uninstall torchvision || true
+		python setup.py install
+		echo
+		echo "Removing build directory..."
+		rm -rf "$TORCHVISION_BUILD_DIR"
+	)
+fi
+echo
 
 #
 # Finish
