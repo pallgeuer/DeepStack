@@ -287,7 +287,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	conda clean --all
 	set -u
 	[[ -f "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh"
-	[[ -f "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_deactivate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh"
+	[[ -f "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh"
 	echo
 	echo "Installing pip packages..."
 	pip install --no-deps --no-cache-dir pycuda pytools
