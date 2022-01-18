@@ -373,7 +373,7 @@ echo
 
 # Build PyTorch
 echo "Building PyTorch $CFG_PYTORCH_VERSION..."
-if find "$CONDA_ENV_DIR/lib" -type d -path "python*/site-packages/torch" -exec false {} +; then
+if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -exec false {} +; then
 	(
 		[[ ! -d "$PYTORCH_BUILD_DIR" ]] && mkdir "$PYTORCH_BUILD_DIR"
 		rm -rf "$PYTORCH_BUILD_DIR"/*
@@ -383,9 +383,12 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "python*/site-packages/torch" -exec f
 		set -u
 		export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
 		export BUILD_BINARY=ON BUILD_TEST=OFF BUILD_DOCS=OFF BUILD_SHARED_LIBS=ON BUILD_CUSTOM_PROTOBUF=ON
-		export USE_CUDNN=ON USE_FFMPEG=ON USE_GFLAGS=ON USE_GLOG=ON USE_OPENCV=ON
+		export USE_CUDNN=ON USE_FFMPEG=ON USE_GFLAGS=OFF USE_GLOG=OFF USE_OPENCV=ON
 		while ! time python setup.py build; do
 			response=
+			echo
+			echo "Known reasons for a required build restart:"
+			echo " - PyTorch 1.10 introduced 'fatal error: ATen/core/TensorBody.h: No such file or directory' due to a build target ordering/dependency problem"
 			echo
 			read -p "Try build again (y/N)? " response 2>&1
 			response="${response,,}"
@@ -401,6 +404,7 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "python*/site-packages/torch" -exec f
 		python setup.py install
 		echo
 		echo "Checking PyTorch is available in python..."
+		cd "$MAIN_PYTORCH_DIR"
 		python - << EOM
 import torch
 print("Number of devices:", torch.cuda.device_count())
@@ -446,7 +450,7 @@ echo
 
 # Build Torchvision
 echo "Building Torchvision $CFG_TORCHVISION_VERSION..."
-if find "$CONDA_ENV_DIR/lib" -type d -path "python*/site-packages/torchvision" -exec false {} +; then
+if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchvision-*.egg" -exec false {} +; then
 	(
 		[[ ! -d "$TORCHVISION_BUILD_DIR" ]] && mkdir "$TORCHVISION_BUILD_DIR"
 		rm -rf "$TORCHVISION_BUILD_DIR"/*
@@ -483,7 +487,7 @@ echo
 #
 
 # Signal that the script completely finished
-echo "Finished PyTorch installation"
+echo "Finished PyTorch installation into conda env $CFG_CONDA_ENV"
 echo
 
 # EOF
