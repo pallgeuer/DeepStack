@@ -1,5 +1,5 @@
 #!/bin/bash -i
-# Install an isolated CUDA/cuDNN stack
+# Install PyTorch into a conda environment
 
 # Retrieve the script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
