@@ -34,10 +34,11 @@ CFG_PYTORCH_NAME="${CFG_PYTORCH_NAME:-pytorch-$CFG_PYTORCH_VERSION}"
 # Example: CFG_TORCHVISION_TAG=v0.11.2
 CFG_TORCHVISION_VERSION="${CFG_TORCHVISION_VERSION:-${CFG_TORCHVISION_TAG#v}}"
 
-# OpenCV python git tag (tag should be one of these: https://github.com/opencv/opencv-python/tags, click on the tag to see the corresponding OpenCV version)
-# Example: CFG_OPENCV_PYTHON_TAG=60
-CFG_OPENCV_CONTRIB="${CFG_OPENCV_CONTRIB:-1}"
+# OpenCV git tag and version (tag should be one of these: https://github.com/opencv/opencv/tags)
+# Example: CFG_OPENCV_TAG=4.5.4
+CFG_OPENCV_VERSION="${CFG_OPENCV_VERSION:-$CFG_OPENCV_TAG}"
 CFG_OPENCV_HEADLESS="${CFG_OPENCV_HEADLESS:-0}"
+CFG_OPENCV_CMAKE="${CFG_OPENCV_CMAKE:-}"  # Note: This is not expansion-safe
 
 # Name to use for the created conda environment
 CFG_CONDA_ENV="${CFG_CONDA_ENV:-$CFG_PYTORCH_NAME-$CFG_CUDA_NAME}"
@@ -54,9 +55,8 @@ cd "$CFG_ROOT_DIR"
 CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
 CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
-[[ "$CFG_CONDA_CREATE" != "1" ]] && CFG_CONDA_CREATE="0"
-[[ "$CFG_OPENCV_CONTRIB" != "1" ]] && CFG_OPENCV_CONTRIB="0"
 [[ "$CFG_OPENCV_HEADLESS" != "0" ]] && CFG_OPENCV_HEADLESS="1"
+[[ "$CFG_CONDA_CREATE" != "1" ]] && CFG_CONDA_CREATE="0"
 
 # Display the configuration
 echo
@@ -70,9 +70,10 @@ echo "CFG_PYTORCH_VERSION = $CFG_PYTORCH_VERSION"
 echo "CFG_PYTORCH_NAME = $CFG_PYTORCH_NAME"
 echo "CFG_TORCHVISION_TAG = $CFG_TORCHVISION_TAG"
 echo "CFG_TORCHVISION_VERSION = $CFG_TORCHVISION_VERSION"
-echo "CFG_OPENCV_PYTHON_TAG = $CFG_OPENCV_PYTHON_TAG"
-echo "CFG_OPENCV_CONTRIB = $CFG_OPENCV_CONTRIB"
+echo "CFG_OPENCV_TAG = $CFG_OPENCV_TAG"
+echo "CFG_OPENCV_VERSION = $CFG_OPENCV_VERSION"
 echo "CFG_OPENCV_HEADLESS = $CFG_OPENCV_HEADLESS"
+echo "CFG_OPENCV_CMAKE = $CFG_OPENCV_CMAKE"
 echo "CFG_CONDA_CREATE = $CFG_CONDA_CREATE"
 echo "CFG_CONDA_ENV = $CFG_CONDA_ENV"
 echo "CFG_CONDA_PYTHON = $CFG_CONDA_PYTHON"
@@ -90,7 +91,7 @@ echo
 
 # Initialise uninstaller script
 UNINSTALLERS_DIR="$CFG_ROOT_DIR/Uninstallers"
-UNINSTALLER_SCRIPT="$UNINSTALLERS_DIR/uninstall-$CFG_CONDA_ENV.sh"
+UNINSTALLER_SCRIPT="$UNINSTALLERS_DIR/uninstall-$CFG_CONDA_ENV-pytorch.sh"
 echo "Creating uninstaller script: $UNINSTALLER_SCRIPT"
 [[ ! -d "$UNINSTALLERS_DIR" ]] && mkdir "$UNINSTALLERS_DIR"
 read -r -d '' UNINSTALLER_HEADER << EOM || true
@@ -133,12 +134,14 @@ ENVS_DIR="$CFG_ROOT_DIR/envs"
 ENV_DIR="$ENVS_DIR/$CFG_CONDA_ENV"
 PYTORCH_GIT_DIR="$ENV_DIR/pytorch"
 TORCHVISION_GIT_DIR="$ENV_DIR/torchvision"
-OPENCV_PYTHON_GIT_DIR="$ENV_DIR/opencv-python"
+OPENCV_GIT_DIR="$ENV_DIR/opencv"
+OPENCV_CONTRIB_GIT_DIR="$ENV_DIR/opencv_contrib"
 
 # Stage 1 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 1:
-rm -rf '$ENV_DIR'
+rm -rf '$PYTORCH_GIT_DIR' '$TORCHVISION_GIT_DIR' '$OPENCV_GIT_DIR' '$OPENCV_CONTRIB_GIT_DIR'
+rmdir --ignore-fail-on-non-empty '$ENV_DIR' || true
 rmdir --ignore-fail-on-non-empty '$ENVS_DIR' || true
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
@@ -181,24 +184,23 @@ fi
 echo
 
 # Clone the OpenCV repositories
-echo "Cloning OpenCV python build tag $CFG_OPENCV_PYTHON_TAG..."
-if [[ ! -d "$OPENCV_PYTHON_GIT_DIR" ]]; then
+echo "Cloning OpenCV $CFG_OPENCV_VERSION..."
+if [[ ! -d "$OPENCV_GIT_DIR" ]]; then
 	(
 		set -x
 		cd "$ENV_DIR"
-		git clone --recursive -j"$(nproc)" https://github.com/opencv/opencv-python.git opencv-python
-		cd "$OPENCV_PYTHON_GIT_DIR"
-		git checkout "$CFG_OPENCV_PYTHON_TAG"
-		git checkout --recurse-submodules "$CFG_OPENCV_PYTHON_TAG"
-		git submodule sync
-		git submodule update --init --recursive
-		git submodule status
+		git clone https://github.com/opencv/opencv opencv
+		git clone https://github.com/opencv/opencv_contrib opencv_contrib
+		cd "$OPENCV_GIT_DIR"
+		git checkout "$CFG_OPENCV_TAG"
+		cd "$OPENCV_CONTRIB_GIT_DIR"
+		git checkout "$CFG_OPENCV_TAG"
 	)
 fi
 echo
 
 # Stop if stage limit reached
-[[ "$CFG_STAGE" -le 1 ]] && exit 0
+[[ "$CFG_STAGE" -eq 1 ]] && exit 0
 
 #
 # Stage 2
@@ -317,13 +319,14 @@ set -u
 echo
 
 # Stop if stage limit reached
-[[ "$CFG_STAGE" -le 2 ]] && exit 0
+[[ "$CFG_STAGE" -eq 2 ]] && exit 0
 
 #
 # Stage 3
 #
 
 # Variables
+OPENCV_BUILD_DIR="$OPENCV_GIT_DIR/build"
 OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 
 # Stage 3 uninstall
@@ -332,64 +335,54 @@ Commands to undo stage 3:
 set +ux
 conda activate '$CFG_CONDA_ENV' && pip uninstall \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
 set -ux
-rm -rf '$OPENCV_PYTHON_STUB_DIR' '$OPENCV_PYTHON_GIT_DIR'/*.whl
+if [[ -d '$OPENCV_BUILD_DIR' ]]; then ( cd '$OPENCV_BUILD_DIR'; make uninstall; make clean; ) elif [[ -f '$OPENCV_GIT_DIR/install_manifest.txt' ]]; then echo 'You will need to check the install manifest and uninstall manually: $OPENCV_GIT_DIR/install_manifest.txt'; fi
+rm -rf '$OPENCV_BUILD_DIR' '$OPENCV_GIT_DIR/.cache' '$OPENCV_PYTHON_STUB_DIR'
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
 
 # Build OpenCV
-echo "Building OpenCV python build tag $CFG_OPENCV_PYTHON_TAG..."
-if find "$OPENCV_PYTHON_GIT_DIR" -maxdepth 1 -type f -name "opencv_*.whl" -exec false {} +; then
+echo "Building OpenCV $CFG_OPENCV_VERSION..."
+if [[ ! -f "$CONDA_PREFIX/bin/opencv_version" ]]; then
 	(
-		rm -rf "$OPENCV_PYTHON_GIT_DIR"/*.whl
-		cd "$OPENCV_PYTHON_GIT_DIR"
+		[[ ! -d "$OPENCV_BUILD_DIR" ]] && mkdir "$OPENCV_BUILD_DIR"
+		rm -rf "$OPENCV_BUILD_DIR"/* "$OPENCV_GIT_DIR/.cache"
+		cd "$OPENCV_BUILD_DIR"
 		set +u
 		conda activate "$CFG_CONDA_ENV"
 		set -u
+		[[ "$CFG_OPENCV_HEADLESS" == "0" ]] && WITH_QT=ON || WITH_QT=OFF
 		export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
-		export CMAKE_ARGS="-DCMAKE_CXX_STANDARD=14 -DENABLE_CONFIG_VERIFICATION=ON -DOPENCV_ENABLE_NONFREE=ON -DENABLE_FAST_MATH=OFF -DWITH_IMGCODEC_HDR=ON -DWITH_IMGCODEC_SUNRASTER=ON -DWITH_IMGCODEC_PXM=ON -DWITH_IMGCODEC_PFM=ON -DWITH_ADE=ON -DWITH_PNG=ON -DWITH_JPEG=ON -DWITH_TIFF=ON -DWITH_WEBP=ON -DWITH_OPENJPEG=ON -DWITH_JASPER=OFF -DWITH_OPENEXR=ON -DBUILD_OPENEXR=ON -DWITH_TESSERACT=OFF -DWITH_V4L=OFF -DWITH_FFMPEG=ON -DWITH_GSTREAMER=ON -DWITH_1394=ON -DWITH_OPENGL=ON -DOpenGL_GL_PREFERENCE=LEGACY -DWITH_PTHREADS_PF=ON -DWITH_TBB=ON -DWITH_OPENMP=ON -DWITH_CUDA=ON -DCUDA_GENERATION=Auto -DCUDA_FAST_MATH=OFF -DWITH_CUDNN=ON -DWITH_CUFFT=ON -DWITH_CUBLAS=ON -DWITH_OPENCL=ON -DWITH_OPENCLAMDFFT=OFF -DWITH_OPENCLAMDBLAS=OFF -DWITH_VA=ON -DWITH_VA_INTEL=ON -DWITH_PROTOBUF=ON -DBUILD_PROTOBUF=ON -DPROTOBUF_UPDATE_FILES=OFF -DOPENCV_DNN_CUDA=ON -DOPENCV_DNN_OPENCL=ON -DWITH_EIGEN=ON -DWITH_LAPACK=ON -DWITH_QUIRC=ON"
-		[[ "$CFG_OPENCV_HEADLESS" == "0" ]] && CMAKE_ARGS+=" -DWITH_VTK=OFF -DWITH_GTK=OFF -DWITH_QT=ON"
-		export ENABLE_CONTRIB="$CFG_OPENCV_CONTRIB"
-		export ENABLE_HEADLESS="$CFG_OPENCV_HEADLESS"
-		time pip wheel --verbose .
+		cmake -DCMAKE_INSTALL_PREFIX="$CONDA_PREFIX" -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 -DBUILD_SHARED_LIBS=ON -DENABLE_CONFIG_VERIFICATION=ON -DOPENCV_ENABLE_NONFREE=ON -DENABLE_FAST_MATH=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_DOCS=OFF -DBUILD_opencv_apps=ON -DPYTHON_DEFAULT_EXECUTABLE="$CONDA_PREFIX/bin/python" -DPYTHON3_EXECUTABLE="$CONDA_PREFIX/bin/python" -DBUILD_opencv_python2=OFF -DBUILD_opencv_python3=ON -DBUILD_opencv_java=OFF -DWITH_MATLAB=OFF -DWITH_IMGCODEC_HDR=ON -DWITH_IMGCODEC_SUNRASTER=ON -DWITH_IMGCODEC_PXM=ON -DWITH_IMGCODEC_PFM=ON -DWITH_ADE=ON -DWITH_PNG=ON -DWITH_JPEG=ON -DWITH_TIFF=ON -DWITH_WEBP=ON -DWITH_OPENJPEG=ON -DWITH_JASPER=OFF -DWITH_OPENEXR=ON -DBUILD_OPENEXR=ON -DWITH_TESSERACT=OFF -DWITH_V4L=OFF -DWITH_FFMPEG=ON -DWITH_GSTREAMER=ON -DWITH_1394=ON -DWITH_OPENGL=ON -DOpenGL_GL_PREFERENCE=LEGACY -DWITH_VTK=OFF -DWITH_GTK=OFF -DWITH_QT="$WITH_QT" -DWITH_PTHREADS_PF=ON -DWITH_TBB=ON -DWITH_OPENMP=ON -DWITH_CUDA=ON -DCUDA_GENERATION=Auto -DCUDA_FAST_MATH=OFF -DWITH_CUDNN=ON -DWITH_CUFFT=ON -DWITH_CUBLAS=ON -DWITH_OPENCL=ON -DWITH_OPENCLAMDFFT=OFF -DWITH_OPENCLAMDBLAS=OFF -DWITH_VA=ON -DWITH_VA_INTEL=ON -DWITH_PROTOBUF=ON -DBUILD_PROTOBUF=ON -DPROTOBUF_UPDATE_FILES=OFF -DOPENCV_DNN_CUDA=ON -DOPENCV_DNN_OPENCL=ON -DWITH_EIGEN=ON -DWITH_LAPACK=ON -DWITH_QUIRC=ON $CFG_OPENCV_CMAKE ..
+		time make -j"$(nproc)"
+		echo
+		echo "Checking which external libraries the build products dynamically link to..."
+		find "$OPENCV_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$OPENCV_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
+		echo
+		echo "Installing OpenCV into conda environment..."
+		pip uninstall $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
+		make install
+		cp "$OPENCV_BUILD_DIR/install_manifest.txt" "$OPENCV_GIT_DIR/install_manifest.txt"
+		echo
+		echo "Running opencv_version script and showing build information..."
+		"$OPENCV_BUILD_DIR/bin/opencv_version"
+		python -c "import cv2; print('Found Python OpenCV', cv2.__version__); print(cv2.getBuildInformation())"
 	)
 fi
 echo
 
-# Install OpenCV
-echo "Installing OpenCV python build tag $CFG_OPENCV_PYTHON_TAG..."
-OPENCV_WHEEL="$(find "$OPENCV_PYTHON_GIT_DIR" -maxdepth 1 -type f -name "opencv_*.whl" -print -quit)"
-if [[ -z "$OPENCV_WHEEL" ]]; then
-	echo "Failed to find output OpenCV wheel"
-	exit 1
-fi
-OPENCV_PACKAGE="$(basename "$OPENCV_WHEEL")"
-OPENCV_PACKAGE="${OPENCV_PACKAGE%%-*}"
-OPENCV_PACKAGE="${OPENCV_PACKAGE//_/-}"
-if ! pip show "$OPENCV_PACKAGE" &>/dev/null; then
-	pip uninstall $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
-	pip install "$OPENCV_WHEEL"
-fi
-echo
-
 # Install OpenCV stub package if required
-if [[ "$OPENCV_PACKAGE" != "opencv-python" ]]; then
-	OPENCV_VERSION_LONG="$(pip show "$OPENCV_PACKAGE" | grep 'Version: ' | head -n1 | cut -d' ' -f2)"
-	if [[ -z "$OPENCV_VERSION_LONG" ]]; then
-		echo "Unable to determine installed OpenCV package version"
-		exit 1
-	fi
-	echo "Building OpenCV python stub package for version $OPENCV_VERSION_LONG..."
-	[[ ! -d "$OPENCV_PYTHON_STUB_DIR" ]] && mkdir "$OPENCV_PYTHON_STUB_DIR"
-	if find "$OPENCV_PYTHON_STUB_DIR" -maxdepth 1 -type f -name "opencv_python-*.whl" -exec false {} +; then
-		(
-			[[ ! -d "$OPENCV_PYTHON_STUB_DIR/opencv-python" ]] && mkdir "$OPENCV_PYTHON_STUB_DIR/opencv-python"
-			cat << EOM > "$OPENCV_PYTHON_STUB_DIR/setup.py"
+echo "Building OpenCV python stub package for version $CFG_OPENCV_VERSION..."
+[[ ! -d "$OPENCV_PYTHON_STUB_DIR" ]] && mkdir "$OPENCV_PYTHON_STUB_DIR"
+if find "$OPENCV_PYTHON_STUB_DIR" -maxdepth 1 -type f -name "opencv_python-*.whl" -exec false {} +; then
+	(
+		[[ ! -d "$OPENCV_PYTHON_STUB_DIR/opencv-python" ]] && mkdir "$OPENCV_PYTHON_STUB_DIR/opencv-python"
+		cat << EOM > "$OPENCV_PYTHON_STUB_DIR/setup.py"
 from setuptools import setup
 setup(
 	name='opencv-python',
-	version='$OPENCV_VERSION_LONG',
+	version='$CFG_OPENCV_VERSION',
 	description='Stub package that relies on OpenCV python bindings already being installed by some other means',
 	url='https://github.com/skvark/opencv-python',
 	author='Philipp Allgeuer',
@@ -399,25 +392,22 @@ setup(
 EOM
 		cd "$OPENCV_PYTHON_STUB_DIR"
 		pip wheel --verbose .
-		)
-	fi
-	echo
-	echo "Installing OpenCV python stub package for version $OPENCV_VERSION_LONG..."
-	OPENCV_STUB_WHEEL="$(find "$OPENCV_PYTHON_STUB_DIR" -maxdepth 1 -type f -name "opencv_python-*.whl" -print -quit)"
-	if [[ -z "$OPENCV_STUB_WHEEL" ]]; then
-		echo "Failed to find output OpenCV stub wheel"
-		exit 1
-	fi
-	if ! pip show "opencv-python" &>/dev/null; then
-		pip install "$OPENCV_STUB_WHEEL"
-	fi
-	echo
-	echo "Showing installed OpenCV build information..."
-	python -c "import cv2; print('Found python OpenCV', cv2.__version__); print(cv2.getBuildInformation())"
+	)
 fi
+echo
+echo "Installing OpenCV python stub package for version $CFG_OPENCV_VERSION..."
+OPENCV_STUB_WHEEL="$(find "$OPENCV_PYTHON_STUB_DIR" -maxdepth 1 -type f -name "opencv_python-*.whl" -print -quit)"
+if [[ -z "$OPENCV_STUB_WHEEL" ]]; then
+	echo "Failed to find output OpenCV stub wheel"
+	exit 1
+fi
+if ! pip show "opencv-python" &>/dev/null; then
+	pip install "$OPENCV_STUB_WHEEL"
+fi
+echo
 
 # Stop if stage limit reached
-[[ "$CFG_STAGE" -le 3 ]] && exit 0
+[[ "$CFG_STAGE" -eq 3 ]] && exit 0
 
 #
 # Stage 4
@@ -497,7 +487,7 @@ fi
 echo
 
 # Stop if stage limit reached
-[[ "$CFG_STAGE" -le 4 ]] && exit 0
+[[ "$CFG_STAGE" -eq 4 ]] && exit 0
 
 #
 # Stage 5
@@ -553,7 +543,7 @@ fi
 echo
 
 # Stop if stage limit reached
-[[ "$CFG_STAGE" -le 5 ]] && exit 0
+[[ "$CFG_STAGE" -eq 5 ]] && exit 0
 
 #
 # Finish
