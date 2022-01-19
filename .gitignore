@@ -1,5 +1,6 @@
 .*
 *~
 /CUDA
+/envs
 /Installers
 /Uninstallers
