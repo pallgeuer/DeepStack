@@ -14,9 +14,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Configuration
 #
 
-# Whether to skip installation steps that are not strictly necessary in order to save time
-CFG_QUICK="${CFG_QUICK:-}"
-
 # Whether to stop after a particular stage
 CFG_STAGE="${CFG_STAGE:-0}"
 
@@ -63,7 +60,6 @@ CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 
 # Display the configuration
 echo
-echo "CFG_QUICK = $CFG_QUICK"
 echo "CFG_STAGE = $CFG_STAGE"
 echo "CFG_ROOT_DIR = $CFG_ROOT_DIR"
 echo "CFG_CUDA_VERSION = $CFG_CUDA_VERSION"
