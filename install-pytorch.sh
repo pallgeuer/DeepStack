@@ -17,6 +17,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Whether to skip installation steps that are not strictly necessary in order to save time
 CFG_QUICK="${CFG_QUICK:-}"
 
+# Whether to stop after a particular stage
+CFG_STAGE="${CFG_STAGE:-0}"
+
 # Root directory to use for downloading and compiling libraries and storing files in the process of installation
 CFG_ROOT_DIR="${CFG_ROOT_DIR:-$SCRIPT_DIR}"
 
@@ -50,6 +53,7 @@ CFG_CONDA_CREATE="${CFG_CONDA_CREATE:-1}"  # Set this to anything other than "tr
 cd "$CFG_ROOT_DIR"
 
 # Clean up configuration variables
+[[ "$CFG_STAGE" -le 0 ]] 2>/dev/null && CFG_STAGE=0
 CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
 CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
@@ -60,6 +64,7 @@ CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 # Display the configuration
 echo
 echo "CFG_QUICK = $CFG_QUICK"
+echo "CFG_STAGE = $CFG_STAGE"
 echo "CFG_ROOT_DIR = $CFG_ROOT_DIR"
 echo "CFG_CUDA_VERSION = $CFG_CUDA_VERSION"
 echo "CFG_CUDA_NAME = $CFG_CUDA_NAME"
@@ -196,6 +201,9 @@ if [[ ! -d "$OPENCV_PYTHON_GIT_DIR" ]]; then
 fi
 echo
 
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -le 1 ]] && exit 0
+
 #
 # Stage 2
 #
@@ -312,6 +320,9 @@ conda activate "$CFG_CONDA_ENV"
 set -u
 echo
 
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -le 2 ]] && exit 0
+
 #
 # Stage 3
 #
@@ -323,7 +334,7 @@ OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
 set +ux
-conda activate '$CFG_CONDA_ENV' && pip uninstall \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
+conda activate '$CFG_CONDA_ENV' && pip uninstall \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
 set -ux
 rm -rf '$OPENCV_PYTHON_STUB_DIR' '$OPENCV_PYTHON_GIT_DIR'/*.whl
 EOM
@@ -361,7 +372,7 @@ OPENCV_PACKAGE="$(basename "$OPENCV_WHEEL")"
 OPENCV_PACKAGE="${OPENCV_PACKAGE%%-*}"
 OPENCV_PACKAGE="${OPENCV_PACKAGE//_/-}"
 if ! pip show "$OPENCV_PACKAGE" &>/dev/null; then
-	pip uninstall $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ')
+	pip uninstall $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
 	pip install "$OPENCV_WHEEL"
 fi
 echo
@@ -409,6 +420,9 @@ EOM
 	python -c "import cv2; print('Found python OpenCV', cv2.__version__); print(cv2.getBuildInformation())"
 fi
 
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -le 3 ]] && exit 0
+
 #
 # Stage 4
 #
@@ -420,7 +434,7 @@ PYTORCH_BUILD_DIR="$PYTORCH_GIT_DIR/build"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 4:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torch || true; cd '$PYTORCH_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torch 2>/dev/null || true; cd '$PYTORCH_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$PYTORCH_BUILD_DIR' '$PYTORCH_GIT_DIR/torch.egg-info'
 EOM
@@ -457,7 +471,7 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -
 		find "$PYTORCH_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$PYTORCH_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 		echo
 		echo "Installing PyTorch into conda environment..."
-		pip uninstall torch || true
+		pip uninstall torch 2>/dev/null || true
 		python setup.py install
 		echo
 		echo "Checking PyTorch is available in python..."
@@ -486,6 +500,9 @@ EOM
 fi
 echo
 
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -le 4 ]] && exit 0
+
 #
 # Stage 5
 #
@@ -497,7 +514,7 @@ TORCHVISION_BUILD_DIR="$TORCHVISION_GIT_DIR/build"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 5:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchvision || true; cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchvision 2>/dev/null || true; cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$TORCHVISION_BUILD_DIR'
 EOM
@@ -530,7 +547,7 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchvis
 		find "$TORCHVISION_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHVISION_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 		echo
 		echo "Installing Torchvision into conda environment..."
-		pip uninstall torchvision || true
+		pip uninstall torchvision 2>/dev/null || true
 		python setup.py install
 		echo
 		echo "Removing build directory..."
@@ -538,6 +555,9 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchvis
 	)
 fi
 echo
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -le 5 ]] && exit 0
 
 #
 # Finish
