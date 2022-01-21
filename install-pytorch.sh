@@ -461,7 +461,7 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -
 		python setup.py install
 		echo
 		echo "Checking PyTorch is available in python..."
-		cd "$MAIN_PYTORCH_DIR"
+		cd "$ENV_DIR"
 		python - << EOM
 import torch
 print("Number of devices:", torch.cuda.device_count())
