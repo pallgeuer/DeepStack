@@ -15,6 +15,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Whether to stop after a particular stage
 CFG_STAGE="${CFG_STAGE:-0}"
 
+# Whether to have faith and auto-answer all prompts
+CFG_AUTO_ANSWER="${CFG_AUTO_ANSWER:-0}"
+
 # Root directory to use for downloading and compiling libraries and storing files in the process of installation
 CFG_ROOT_DIR="${CFG_ROOT_DIR:-$SCRIPT_DIR}"
 
@@ -44,6 +47,12 @@ cd "$CFG_ROOT_DIR"
 
 # Clean up configuration variables
 [[ "$CFG_STAGE" -le 0 ]] 2>/dev/null && CFG_STAGE=0
+if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
+	CFG_AUTO_YES=
+else
+	CFG_AUTO_ANSWER="1"
+	CFG_AUTO_YES=-y
+fi
 CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
 CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
@@ -55,6 +64,7 @@ CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 # Display the configuration
 echo
 echo "CFG_STAGE = $CFG_STAGE"
+echo "CFG_AUTO_ANSWER = $CFG_AUTO_ANSWER"
 echo "CFG_ROOT_DIR = $CFG_ROOT_DIR"
 echo "CFG_CUDA_VERSION = $CFG_CUDA_VERSION"
 echo "CFG_CUDA_NAME = $CFG_CUDA_NAME"
@@ -68,8 +78,10 @@ echo "CFG_CONDA_CREATE = $CFG_CONDA_CREATE"
 echo "CFG_CONDA_ENV = $CFG_CONDA_ENV"
 echo "CFG_CONDA_PYTHON = $CFG_CONDA_PYTHON"
 echo
-read -n 1 -p "Continue [ENTER] "
-echo
+if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
+	read -n 1 -p "Continue [ENTER] "
+	echo
+fi
 
 #
 # Installation
@@ -109,8 +121,8 @@ echo
 
 # Install system dependencies
 echo "Installing various system dependencies..."
-sudo apt install libnuma-dev
-sudo apt install openmpi-bin libopenmpi-dev
+sudo apt install $CFG_AUTO_YES libnuma-dev
+sudo apt install $CFG_AUTO_YES openmpi-bin libopenmpi-dev
 echo
 
 #
@@ -177,7 +189,7 @@ if [[ "$CFG_CONDA_CREATE" != "1" ]] || find "$(conda info --base)"/envs -mindept
 else
 	echo "If you want an existing conda environment to be used instead, then create and configure the environment and pass its name as CFG_CONDA_ENV and set CFG_CONDA_CREATE=0"
 	set +u
-	conda create -n "$CFG_CONDA_ENV" python="$CFG_CONDA_PYTHON"
+	conda create $CFG_AUTO_YES -n "$CFG_CONDA_ENV" python="$CFG_CONDA_PYTHON"
 	set -u
 	CREATED_CONDA_ENV=true
 fi
@@ -238,18 +250,18 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	set +u
 	conda config --env --append channels conda-forge
 	conda config --env --set channel_priority strict
-	conda install ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile
-	conda install --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
+	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile
+	conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
 	CERES_EIGEN_VERSION="$(grep -oP '(?<=set\(CERES_EIGEN_VERSION)\s+[0-9.]+\s*(?=\))' "$CONDA_ENV_DIR/lib/cmake/Ceres/CeresConfig.cmake")"
 	CERES_EIGEN_VERSION="${CERES_EIGEN_VERSION// /}"
 	if [[ -n "$CERES_EIGEN_VERSION" ]]; then
 		conda config --env --set channel_priority flexible
-		conda install eigen="$CERES_EIGEN_VERSION"
+		conda install $CFG_AUTO_YES eigen="$CERES_EIGEN_VERSION"
 	else
 		echo "Failed to parse Eigen version required by Ceres"
 		exit 1
 	fi
-	conda clean --all
+	conda clean $CFG_AUTO_YES --all
 	set -u
 	[[ -f "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh"
 	[[ -f "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh"
@@ -304,7 +316,7 @@ if find "$OPENCV_PYTHON_GIT_DIR" -maxdepth 1 -type f -name "opencv_*.whl" -exec 
 		export ENABLE_CONTRIB="$CFG_OPENCV_CONTRIB"
 		export ENABLE_HEADLESS="$CFG_OPENCV_HEADLESS"
 		export MAKEFLAGS="-j$(nproc)"
-		time pip wheel --verbose .
+		time pip wheel --verbose --use-feature=in-tree-build .
 	)
 fi
 echo
@@ -320,7 +332,7 @@ OPENCV_PACKAGE="$(basename "$OPENCV_WHEEL")"
 OPENCV_PACKAGE="${OPENCV_PACKAGE%%-*}"
 OPENCV_PACKAGE="${OPENCV_PACKAGE//_/-}"
 if ! pip show "$OPENCV_PACKAGE" &>/dev/null; then
-	pip uninstall $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
+	pip uninstall $CFG_AUTO_YES $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
 	pip install "$OPENCV_WHEEL"
 fi
 echo
@@ -350,7 +362,7 @@ setup(
 )
 EOM
 		cd "$OPENCV_PYTHON_STUB_DIR"
-		pip wheel --verbose .
+		pip wheel --verbose --use-feature=in-tree-build .
 		)
 	fi
 	echo
