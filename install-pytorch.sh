@@ -17,6 +17,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Whether to stop after a particular stage
 CFG_STAGE="${CFG_STAGE:-0}"
 
+# Whether to have faith and auto-answer all prompts
+CFG_AUTO_ANSWER="${CFG_AUTO_ANSWER:-0}"
+
 # Root directory to use for downloading and compiling libraries and storing files in the process of installation
 CFG_ROOT_DIR="${CFG_ROOT_DIR:-$SCRIPT_DIR}"
 
@@ -52,6 +55,12 @@ cd "$CFG_ROOT_DIR"
 
 # Clean up configuration variables
 [[ "$CFG_STAGE" -le 0 ]] 2>/dev/null && CFG_STAGE=0
+if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
+	CFG_AUTO_YES=
+else
+	CFG_AUTO_ANSWER="1"
+	CFG_AUTO_YES=-y
+fi
 CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
 CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
@@ -61,6 +70,7 @@ CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 # Display the configuration
 echo
 echo "CFG_STAGE = $CFG_STAGE"
+echo "CFG_AUTO_ANSWER = $CFG_AUTO_ANSWER"
 echo "CFG_ROOT_DIR = $CFG_ROOT_DIR"
 echo "CFG_CUDA_VERSION = $CFG_CUDA_VERSION"
 echo "CFG_CUDA_NAME = $CFG_CUDA_NAME"
@@ -78,8 +88,10 @@ echo "CFG_CONDA_CREATE = $CFG_CONDA_CREATE"
 echo "CFG_CONDA_ENV = $CFG_CONDA_ENV"
 echo "CFG_CONDA_PYTHON = $CFG_CONDA_PYTHON"
 echo
-read -n 1 -p "Continue [ENTER] "
-echo
+if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
+	read -n 1 -p "Continue [ENTER] "
+	echo
+fi
 
 #
 # Installation
@@ -119,10 +131,10 @@ echo
 
 # Install system dependencies
 echo "Installing various system dependencies..."
-sudo apt install fftw3 fftw3-dev
-sudo apt install libnuma-dev
-sudo apt install openmpi-bin libopenmpi-dev
-sudo apt install protobuf-compiler libprotobuf-dev
+sudo apt install $CFG_AUTO_YES fftw3 fftw3-dev
+sudo apt install $CFG_AUTO_YES libnuma-dev
+sudo apt install $CFG_AUTO_YES openmpi-bin libopenmpi-dev
+sudo apt install $CFG_AUTO_YES protobuf-compiler libprotobuf-dev
 echo
 
 #
@@ -222,7 +234,7 @@ if [[ "$CFG_CONDA_CREATE" != "1" ]] || find "$(conda info --base)"/envs -mindept
 else
 	echo "If you want an existing conda environment to be used instead, then create and configure the environment and pass its name as CFG_CONDA_ENV and set CFG_CONDA_CREATE=0"
 	set +u
-	conda create -n "$CFG_CONDA_ENV" python="$CFG_CONDA_PYTHON"
+	conda create $CFG_AUTO_YES -n "$CFG_CONDA_ENV" python="$CFG_CONDA_PYTHON"
 	set -u
 	CREATED_CONDA_ENV=true
 fi
@@ -284,20 +296,20 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	conda config --env --append channels conda-forge
 	conda config --env --append channels pytorch
 	conda config --env --set channel_priority strict
-	conda install ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
-	conda install astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pybind11 pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
-	conda install decorator appdirs mako numpy six  # For pip packages
-	conda install --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
+	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
+	conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pybind11 pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
+	conda install $CFG_AUTO_YES decorator appdirs mako numpy six  # For pip packages
+	conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
 	CERES_EIGEN_VERSION="$(grep -oP '(?<=set\(CERES_EIGEN_VERSION)\s+[0-9.]+\s*(?=\))' "$CONDA_ENV_DIR/lib/cmake/Ceres/CeresConfig.cmake")"
 	CERES_EIGEN_VERSION="${CERES_EIGEN_VERSION// /}"
 	if [[ -n "$CERES_EIGEN_VERSION" ]]; then
 		conda config --env --set channel_priority flexible
-		conda install eigen="$CERES_EIGEN_VERSION"
+		conda install $CFG_AUTO_YES eigen="$CERES_EIGEN_VERSION"
 	else
 		echo "Failed to parse Eigen version required by Ceres"
 		exit 1
 	fi
-	conda clean --all
+	conda clean $CFG_AUTO_YES --all
 	set -u
 	[[ -f "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh"
 	[[ -f "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh"
@@ -361,7 +373,7 @@ if [[ ! -f "$CONDA_PREFIX/bin/opencv_version" ]]; then
 		find "$OPENCV_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$OPENCV_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 		echo
 		echo "Installing OpenCV into conda environment..."
-		pip uninstall $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
+		pip uninstall $CFG_AUTO_YES $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
 		make install
 		cp "$OPENCV_BUILD_DIR/install_manifest.txt" "$OPENCV_GIT_DIR/install_manifest.txt"
 		echo
@@ -391,7 +403,7 @@ setup(
 )
 EOM
 		cd "$OPENCV_PYTHON_STUB_DIR"
-		pip wheel --verbose .
+		pip wheel --verbose --use-feature=in-tree-build .
 	)
 fi
 echo
@@ -441,23 +453,29 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -
 		export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
 		export BUILD_BINARY=ON BUILD_TEST=OFF BUILD_DOCS=OFF BUILD_SHARED_LIBS=ON BUILD_CUSTOM_PROTOBUF=ON
 		export USE_CUDNN=ON USE_FFMPEG=ON USE_GFLAGS=OFF USE_GLOG=OFF USE_OPENCV=ON
+		RETRIED=
 		while ! time python setup.py build; do
-			response=
 			echo
-			echo "Known reasons for a required build restart:"
-			echo " - PyTorch 1.10 introduced 'fatal error: ATen/core/TensorBody.h: No such file or directory' due to a build target ordering/dependency problem"
-			echo
-			read -p "Try build again (y/N)? " response 2>&1
-			response="${response,,}"
-			[[ "$response" != "y" ]] && exit 1
-			echo
+			if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
+				response=
+				echo "Known reasons for a required build restart:"
+				echo " - PyTorch 1.10 introduced 'fatal error: ATen/core/TensorBody.h: No such file or directory' due to a build target ordering/dependency problem"
+				echo
+				read -p "Try build again (y/N)? " response 2>&1
+				response="${response,,}"
+				[[ "$response" != "y" ]] && exit 1
+				echo
+			elif [[ -n "$RETRIED" ]]; then
+				exit 1
+			fi
+			RETRIED=true
 		done
 		echo
 		echo "Checking which external libraries the build products dynamically link to..."
 		find "$PYTORCH_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$PYTORCH_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 		echo
 		echo "Installing PyTorch into conda environment..."
-		pip uninstall torch 2>/dev/null || true
+		pip uninstall $CFG_AUTO_YES torch 2>/dev/null || true
 		python setup.py install
 		echo
 		echo "Checking PyTorch is available in python..."
@@ -520,20 +538,26 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchvis
 		set -u
 		export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
 		export FORCE_CUDA=ON
+		RETRIED=
 		while ! time python setup.py build; do
-			response=
 			echo
-			read -p "Try build again (y/N)? " response 2>&1
-			response="${response,,}"
-			[[ "$response" != "y" ]] && exit 1
-			echo
+			if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
+				response=
+				read -p "Try build again (y/N)? " response 2>&1
+				response="${response,,}"
+				[[ "$response" != "y" ]] && exit 1
+				echo
+			elif [[ -n "$RETRIED" ]]; then
+				exit 1
+			fi
+			RETRIED=true
 		done
 		echo
 		echo "Checking which external libraries the build products dynamically link to..."
 		find "$TORCHVISION_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHVISION_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 		echo
 		echo "Installing Torchvision into conda environment..."
-		pip uninstall torchvision 2>/dev/null || true
+		pip uninstall $CFG_AUTO_YES torchvision 2>/dev/null || true
 		python setup.py install
 		echo
 		echo "Removing build directory..."
