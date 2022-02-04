@@ -209,7 +209,7 @@ if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
 	echo "Please perform the following actions in the CUDA installer:"
 	echo " - Existing driver found: Select 'Continue'"
 	echo " - EULA: Type 'accept'"
-	echo " - Driver: Deselect all"
+	echo " - Driver: Deselect"
 	echo " - CUDA Toolkit: Press 'a' and deselect all"
 	echo " - CUDA Documentation: Deselect"
 	echo " - Select Install"

@@ -229,7 +229,7 @@ echo
 
 # Create conda environment
 echo "Creating conda environment..."
-if [[ "$CFG_CONDA_CREATE" != "1" ]] || find "$(conda info --base)"/envs -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | grep -Fq "$CFG_CONDA_ENV"; then
+if [[ "$CFG_CONDA_CREATE" != "1" ]] || find "$(conda info --base)"/envs -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | grep -Fqx "$CFG_CONDA_ENV"; then
 	echo "Using already-configured conda environment $CFG_CONDA_ENV without installing any further packages"
 	CREATED_CONDA_ENV=
 else
