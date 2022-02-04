@@ -133,6 +133,7 @@ echo
 echo "Installing various system dependencies..."
 sudo apt install $CFG_AUTO_YES fftw3 fftw3-dev
 sudo apt install $CFG_AUTO_YES libnuma-dev
+sudo apt install $CFG_AUTO_YES libva-dev
 sudo apt install $CFG_AUTO_YES v4l-utils libv4l-dev
 sudo apt install $CFG_AUTO_YES openmpi-bin libopenmpi-dev
 sudo apt install $CFG_AUTO_YES protobuf-compiler libprotobuf-dev
@@ -351,7 +352,7 @@ Commands to undo stage 3:
 set +ux
 conda activate '$CFG_CONDA_ENV' && pip uninstall \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
 set -ux
-if [[ -d '$OPENCV_BUILD_DIR' ]]; then ( cd '$OPENCV_BUILD_DIR'; make uninstall; make clean; ) elif [[ -f '$OPENCV_GIT_DIR/install_manifest.txt' ]]; then echo 'You will need to check the install manifest and uninstall manually: $OPENCV_GIT_DIR/install_manifest.txt'; fi
+if [[ -d '$OPENCV_BUILD_DIR' ]]; then ( cd '$OPENCV_BUILD_DIR'; make uninstall || true; make clean || true; ) elif [[ -f '$OPENCV_GIT_DIR/install_manifest.txt' ]]; then echo 'You will need to check the install manifest and uninstall manually: $OPENCV_GIT_DIR/install_manifest.txt'; fi
 rm -rf '$OPENCV_BUILD_DIR' '$OPENCV_GIT_DIR/.cache' '$OPENCV_PYTHON_STUB_DIR'
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
