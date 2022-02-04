@@ -122,8 +122,11 @@ echo
 # Install system dependencies
 echo "Installing various system dependencies..."
 sudo apt install $CFG_AUTO_YES libnuma-dev
-sudo apt install $CFG_AUTO_YES openmpi-bin libopenmpi-dev
+sudo apt install $CFG_AUTO_YES libva-dev libtbb-dev
 sudo apt install $CFG_AUTO_YES v4l-utils libv4l-dev
+sudo apt install $CFG_AUTO_YES openmpi-bin libopenmpi-dev
+sudo apt install $CFG_AUTO_YES libglu1-mesa libglu1-mesa-dev freeglut3-dev libglfw3 libglfw3-dev libgl1-mesa-glx
+sudo apt install $CFG_AUTO_YES qt5-default
 echo
 
 #
