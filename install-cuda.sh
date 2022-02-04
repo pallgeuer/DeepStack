@@ -31,7 +31,7 @@ CFG_MAX_GCC_VERSION="${CFG_MAX_GCC_VERSION:-}"
 # CUDA toolkit patch URLs to use (https://developer.nvidia.com/cuda-toolkit-archive -> CUDA Toolkit X.X -> Linux -> x86_64 -> Ubuntu -> UU.04 -> runfile (local))
 CFG_CUDA_PATCH_URLS="${CFG_CUDA_PATCH_URLS:-}"
 
-# cuDNN version and URL to use (https://developer.nvidia.com/rdp/cudnn-archive -> cuDNN vY.Y.Y for CUDA X.X -> cuDNN Library for Linux x86_64 (right-click) -> Copy link address)
+# cuDNN version and URL to use (https://developer.nvidia.com/rdp/cudnn-download OR https://developer.nvidia.com/rdp/cudnn-archive -> cuDNN vY.Y.Y for CUDA X.X -> cuDNN Library / Local Installer for Linux x86_64 (right-click) -> Copy link address, should be *.tar.xz or *.tgz)
 # Example: CFG_CUDNN_VERSION=7.6.5
 # Example: CFG_CUDNN_URL='https://developer.nvidia.com/compute/machine-learning/cudnn/secure/7.6.5.32/Production/10.1_20191031/cudnn-10.1-linux-x64-v7.6.5.32.tgz'
 
