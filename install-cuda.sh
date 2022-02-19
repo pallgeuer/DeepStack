@@ -11,6 +11,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Configuration
 #
 
+# Whether to stop after a particular stage
+CFG_STAGE="${CFG_STAGE:-0}"
+
 # Whether to skip installation steps that are not strictly necessary in order to save time
 CFG_QUICK="${CFG_QUICK:-}"
 
@@ -39,6 +42,7 @@ CFG_CUDA_PATCH_URLS="${CFG_CUDA_PATCH_URLS:-}"
 cd "$CFG_ROOT_DIR"
 
 # Clean up configuration variables
+[[ "$CFG_STAGE" -le 0 ]] 2>/dev/null && CFG_STAGE=0
 CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_URL="${CFG_CUDA_URL%/}"
 CFG_CUDNN_URL="${CFG_CUDNN_URL%/}"
@@ -46,6 +50,7 @@ CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
 
 # Display the configuration
 echo
+echo "CFG_STAGE = $CFG_STAGE"
 echo "CFG_QUICK = $CFG_QUICK"
 echo "CFG_ROOT_DIR = $CFG_ROOT_DIR"
 echo "CFG_CUDA_VERSION = $CFG_CUDA_VERSION"
@@ -177,6 +182,9 @@ if [[ ! -f "$CUDNN_TAR" ]]; then
 	fi
 fi
 echo
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq 1 ]] && exit 0
 
 #
 # Stage 2
@@ -387,6 +395,9 @@ if [[ -z "$(find -H "$CUDA_INSTALL_DIR/lib64" -type f -name "libcudnn*")" ]]; th
 fi
 echo
 
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq 2 ]] && exit 0
+
 #
 # Stage 3
 #
@@ -442,6 +453,9 @@ if [[ -z "$CFG_QUICK" ]] && [[ ! -f "$CUDA_SAMPLES_COMPILED" ]]; then
 	)
 fi
 echo
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq 3 ]] && exit 0
 
 #
 # Finish
