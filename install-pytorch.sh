@@ -43,6 +43,10 @@ CFG_OPENCV_VERSION="${CFG_OPENCV_VERSION:-$CFG_OPENCV_TAG}"
 CFG_OPENCV_HEADLESS="${CFG_OPENCV_HEADLESS:-0}"
 CFG_OPENCV_CMAKE="${CFG_OPENCV_CMAKE:-}"  # Note: This is not expansion-safe
 
+# TensorRT version and URL to use (https://developer.nvidia.com/nvidia-tensorrt-download -> TensorRT X -> Agree to the terms -> TensorRT X.X.X for Linux x86_64/Ubuntu YY.YY and CUDA Z.Z TAR package -> Fix URL capitalisation if necessary)
+CFG_TENSORRT_VERSION="${CFG_TENSORRT_VERSION:-}"
+CFG_TENSORRT_URL="${CFG_TENSORRT_URL:-}"
+
 # Name to use for the created conda environment
 CFG_CONDA_ENV="${CFG_CONDA_ENV:-$CFG_PYTORCH_NAME-$CFG_CUDA_NAME}"
 CFG_CONDA_CREATE="${CFG_CONDA_CREATE:-1}"  # Set this to anything other than "true" to not attempt environment creation (environment must already exist and be appropriately configured)
@@ -65,6 +69,7 @@ CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
 CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 [[ "$CFG_OPENCV_HEADLESS" != "0" ]] && CFG_OPENCV_HEADLESS="1"
+CFG_TENSORRT_URL="${CFG_TENSORRT_URL%/}"
 [[ "$CFG_CONDA_CREATE" != "1" ]] && CFG_CONDA_CREATE="0"
 
 # Display the configuration
@@ -84,6 +89,8 @@ echo "CFG_OPENCV_TAG = $CFG_OPENCV_TAG"
 echo "CFG_OPENCV_VERSION = $CFG_OPENCV_VERSION"
 echo "CFG_OPENCV_HEADLESS = $CFG_OPENCV_HEADLESS"
 echo "CFG_OPENCV_CMAKE = $CFG_OPENCV_CMAKE"
+echo "CFG_TENSORRT_VERSION = $CFG_TENSORRT_VERSION"
+echo "CFG_TENSORRT_URL = $CFG_TENSORRT_URL"
 echo "CFG_CONDA_CREATE = $CFG_CONDA_CREATE"
 echo "CFG_CONDA_ENV = $CFG_CONDA_ENV"
 echo "CFG_CONDA_PYTHON = $CFG_CONDA_PYTHON"
@@ -146,6 +153,56 @@ echo
 #
 
 # Variables
+INSTALLERS_DIR="$CFG_ROOT_DIR/Installers"
+if [[ -n "$CFG_TENSORRT_URL" ]]; then
+	TENSORRT_TARNAME="${CFG_TENSORRT_URL##*/}"
+	TENSORRT_TAR="$INSTALLERS_DIR/$TENSORRT_TARNAME"
+	if [[ "$TENSORRT_TARNAME" =~ ^([a-zA-Z]+-[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\..*$ ]]; then
+		TENSORRT_DIRNAME="${BASH_REMATCH[1]}"
+	else
+		echo "Failed to parse TensorRT directory name from: $TENSORRT_TARNAME"
+		exit 1
+	fi
+fi
+
+# Stage 1 uninstall
+UNINSTALLER_COMMANDS="Commands to undo stage 1:"
+[[ -n "$CFG_TENSORRT_URL" ]] && UNINSTALLER_COMMANDS+=$'\n'"rm -rf '$TENSORRT_TAR'"
+UNINSTALLER_COMMANDS+=$'\n'"rmdir --ignore-fail-on-non-empty '$INSTALLERS_DIR' || true"
+add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+echo "$UNINSTALLER_COMMANDS"
+echo
+
+# Download installers
+echo "Downloading installers..."
+[[ ! -d "$INSTALLERS_DIR" ]] && mkdir "$INSTALLERS_DIR"
+echo
+if [[ -n "$CFG_TENSORRT_URL" ]]; then
+	echo "Downloading TensorRT $CFG_TENSORRT_VERSION..."
+	if [[ ! -f "$TENSORRT_TAR" ]]; then
+		echo "Please log in with your NVIDIA account and don't close the browser..."
+		xdg-open 'https://www.nvidia.com/en-us/account' || echo "xdg-open failed: Please manually perform the requested action"
+		read -n 1 -p "Press enter when you have done that [ENTER] "
+		echo "Opening download URL: $CFG_TENSORRT_URL"
+		echo "Please save tar to: $TENSORRT_TAR"
+		xdg-open "$CFG_TENSORRT_URL" || echo "xdg-open failed: Please manually perform the requested action"
+		read -n 1 -p "Press enter when it has finished downloading [ENTER] "
+		if [[ ! -f "$TENSORRT_TAR" ]]; then
+			echo "File does not exist: $TENSORRT_TAR"
+			exit 1
+		fi
+	fi
+	echo
+fi
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq 1 ]] && exit 0
+
+#
+# Stage 2
+#
+
+# Variables
 ENVS_DIR="$CFG_ROOT_DIR/envs"
 ENV_DIR="$ENVS_DIR/$CFG_CONDA_ENV"
 PYTORCH_GIT_DIR="$ENV_DIR/pytorch"
@@ -153,9 +210,9 @@ TORCHVISION_GIT_DIR="$ENV_DIR/torchvision"
 OPENCV_GIT_DIR="$ENV_DIR/opencv"
 OPENCV_CONTRIB_GIT_DIR="$ENV_DIR/opencv_contrib"
 
-# Stage 1 uninstall
+# Stage 2 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
-Commands to undo stage 1:
+Commands to undo stage 2:
 rm -rf '$PYTORCH_GIT_DIR' '$TORCHVISION_GIT_DIR' '$OPENCV_GIT_DIR' '$OPENCV_CONTRIB_GIT_DIR'
 rmdir --ignore-fail-on-non-empty '$ENV_DIR' || true
 rmdir --ignore-fail-on-non-empty '$ENVS_DIR' || true
@@ -216,14 +273,14 @@ fi
 echo
 
 # Stop if stage limit reached
-[[ "$CFG_STAGE" -eq 1 ]] && exit 0
+[[ "$CFG_STAGE" -eq 2 ]] && exit 0
 
 #
-# Stage 2
+# Stage 3
 #
 
-# Stage 2 uninstall
-UNINSTALLER_COMMANDS="Commands to undo stage 2:"$'\n'"set +ux"
+# Stage 3 uninstall
+UNINSTALLER_COMMANDS="Commands to undo stage 3:"$'\n'"set +ux"
 [[ "$CFG_CONDA_CREATE" == "1" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda deactivate"$'\n'"conda env remove -n '$CFG_CONDA_ENV'"
 UNINSTALLER_COMMANDS+=$'\n'"conda clean --all"$'\n'"set -ux"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
@@ -336,19 +393,19 @@ set -u
 echo
 
 # Stop if stage limit reached
-[[ "$CFG_STAGE" -eq 2 ]] && exit 0
+[[ "$CFG_STAGE" -eq 3 ]] && exit 0
 
 #
-# Stage 3
+# Stage 4
 #
 
 # Variables
 OPENCV_BUILD_DIR="$OPENCV_GIT_DIR/build"
 OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 
-# Stage 3 uninstall
+# Stage 4 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
-Commands to undo stage 3:
+Commands to undo stage 4:
 set +ux
 conda activate '$CFG_CONDA_ENV' && pip uninstall \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
 set -ux
@@ -424,18 +481,18 @@ fi
 echo
 
 # Stop if stage limit reached
-[[ "$CFG_STAGE" -eq 3 ]] && exit 0
+[[ "$CFG_STAGE" -eq 4 ]] && exit 0
 
 #
-# Stage 4
+# Stage 5
 #
 
 # Variables
 PYTORCH_BUILD_DIR="$PYTORCH_GIT_DIR/build"
 
-# Stage 4 uninstall
+# Stage 5 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
-Commands to undo stage 4:
+Commands to undo stage 5:
 set +ux
 conda activate '$CFG_CONDA_ENV' && ( pip uninstall torch 2>/dev/null || true; cd '$PYTORCH_GIT_DIR' && python setup.py clean || true; )
 set -ux
@@ -510,18 +567,18 @@ fi
 echo
 
 # Stop if stage limit reached
-[[ "$CFG_STAGE" -eq 4 ]] && exit 0
+[[ "$CFG_STAGE" -eq 5 ]] && exit 0
 
 #
-# Stage 5
+# Stage 6
 #
 
 # Variables
 TORCHVISION_BUILD_DIR="$TORCHVISION_GIT_DIR/build"
 
-# Stage 5 uninstall
+# Stage 6 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
-Commands to undo stage 5:
+Commands to undo stage 6:
 set +ux
 conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchvision 2>/dev/null || true; cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
 set -ux
@@ -572,7 +629,7 @@ fi
 echo
 
 # Stop if stage limit reached
-[[ "$CFG_STAGE" -eq 5 ]] && exit 0
+[[ "$CFG_STAGE" -eq 6 ]] && exit 0
 
 #
 # Finish
