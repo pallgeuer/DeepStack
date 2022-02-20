@@ -29,16 +29,16 @@ CFG_CUDA_NAME="${CFG_CUDA_NAME:-cuda-$CFG_CUDA_VERSION}"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION:-/usr/local}"
 
 # PyTorch git tag, version and name to install (tag should be one of these: https://github.com/pytorch/pytorch/tags)
-# Example: CFG_PYTORCH_TAG=v1.10.1
+# Example: CFG_PYTORCH_TAG=v1.10.2
 CFG_PYTORCH_VERSION="${CFG_PYTORCH_VERSION:-${CFG_PYTORCH_TAG#v}}"
 CFG_PYTORCH_NAME="${CFG_PYTORCH_NAME:-pytorch-$CFG_PYTORCH_VERSION}"
 
 # Torchvision git tag and version (see https://github.com/pytorch/vision#installation for compatibility, tag should be one of these: https://github.com/pytorch/vision/tags)
-# Example: CFG_TORCHVISION_TAG=v0.11.2
+# Example: CFG_TORCHVISION_TAG=v0.11.3
 CFG_TORCHVISION_VERSION="${CFG_TORCHVISION_VERSION:-${CFG_TORCHVISION_TAG#v}}"
 
 # OpenCV git tag and version (tag should be one of these: https://github.com/opencv/opencv/tags)
-# Example: CFG_OPENCV_TAG=4.5.4
+# Example: CFG_OPENCV_TAG=4.5.5
 CFG_OPENCV_VERSION="${CFG_OPENCV_VERSION:-$CFG_OPENCV_TAG}"
 CFG_OPENCV_HEADLESS="${CFG_OPENCV_HEADLESS:-0}"
 CFG_OPENCV_CMAKE="${CFG_OPENCV_CMAKE:-}"  # Note: This is not expansion-safe
