@@ -209,6 +209,9 @@ PYTORCH_GIT_DIR="$ENV_DIR/pytorch"
 TORCHVISION_GIT_DIR="$ENV_DIR/torchvision"
 OPENCV_GIT_DIR="$ENV_DIR/opencv"
 OPENCV_CONTRIB_GIT_DIR="$ENV_DIR/opencv_contrib"
+MAIN_TENSORRT_DIR="$CFG_ROOT_DIR/TensorRT"
+LOCAL_TENSORRT_DIR="$MAIN_TENSORRT_DIR/$TENSORRT_DIRNAME"
+TENSORRT_ENVS_LIST="$LOCAL_TENSORRT_DIR/envs.list"
 
 # Stage 2 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
@@ -217,6 +220,14 @@ rm -rf '$PYTORCH_GIT_DIR' '$TORCHVISION_GIT_DIR' '$OPENCV_GIT_DIR' '$OPENCV_CONT
 rmdir --ignore-fail-on-non-empty '$ENV_DIR' || true
 rmdir --ignore-fail-on-non-empty '$ENVS_DIR' || true
 EOM
+if [[ -n "$CFG_TENSORRT_URL" ]]; then
+	read -r -d '' EXTRA_UNINSTALLER_COMMANDS << EOM || true
+[[ -f '$TENSORRT_ENVS_LIST' ]] && { grep -vFx '$CFG_CONDA_ENV'$'\n' '$TENSORRT_ENVS_LIST' > '${TENSORRT_ENVS_LIST}.tmp'; mv '${TENSORRT_ENVS_LIST}.tmp' '$TENSORRT_ENVS_LIST'; }
+[[ "\$(cat '$TENSORRT_ENVS_LIST' 2>/dev/null | wc -l)" -eq 0 ]] && rm -rf '$LOCAL_TENSORRT_DIR'
+rmdir --ignore-fail-on-non-empty '$MAIN_TENSORRT_DIR' || true
+EOM
+	UNINSTALLER_COMMANDS+=$'\n'"$EXTRA_UNINSTALLER_COMMANDS"
+fi
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
@@ -271,6 +282,23 @@ if [[ ! -d "$OPENCV_GIT_DIR" ]]; then
 	)
 fi
 echo
+
+# Unpack TensorRT
+if [[ -n "$CFG_TENSORRT_URL" ]]; then
+	echo "Unpacking TensorRT $CFG_TENSORRT_VERSION..."
+	[[ ! -d "$MAIN_TENSORRT_DIR" ]] && mkdir "$MAIN_TENSORRT_DIR"
+	if [[ ! -d "$LOCAL_TENSORRT_DIR" ]]; then
+		tar -xf "$TENSORRT_TAR" -C "$MAIN_TENSORRT_DIR"
+		if [[ ! -d "$LOCAL_TENSORRT_DIR" ]]; then
+			echo "TensorRT tar unpacking failed or unpacked to an unexpected directory name (should be $TENSORRT_DIRNAME): $TENSORRT_TAR"
+			exit 1
+		fi
+	fi
+	if ! grep -qFx "$CFG_CONDA_ENV" "$TENSORRT_ENVS_LIST" 2>/dev/null; then
+		echo "$CFG_CONDA_ENV" >> "$TENSORRT_ENVS_LIST"
+	fi
+	echo
+fi
 
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 2 ]] && exit 0

@@ -1,6 +1,7 @@
 .*
 *~
 /CUDA
+/TensorRT
 /envs
 /Installers
 /Uninstallers
