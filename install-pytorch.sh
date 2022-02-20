@@ -298,6 +298,7 @@ if [[ -n "$CFG_TENSORRT_URL" ]]; then
 		echo "$CFG_CONDA_ENV" >> "$TENSORRT_ENVS_LIST"
 	fi
 	echo
+	# TODO: Create add_path.sh / remove_path.sh scripts if they don't exist!
 fi
 
 # Stop if stage limit reached
@@ -357,12 +358,12 @@ if [ -n "$SUPPRESSED_PYTHONPATH" ]; then
 fi
 # EOF
 EOM
-cat << EOM > "$CONDA_ENV_DIR/etc/conda/activate.d/env_vars.sh"
+cat << EOM > "$CONDA_ENV_DIR/etc/conda/activate.d/env_vars.sh"  # TODO: Add TensorRT path if [[ -n "$CFG_TENSORRT_URL" ]]
 #!/bin/sh
 source '$CUDA_INSTALL_DIR/add_path.sh'
 # EOF
 EOM
-cat << EOM > "$CONDA_ENV_DIR/etc/conda/deactivate.d/env_vars.sh"
+cat << EOM > "$CONDA_ENV_DIR/etc/conda/deactivate.d/env_vars.sh"  # TODO: Remove TensorRT path if [[ -n "$CFG_TENSORRT_URL" ]]
 #!/bin/sh
 source '$CUDA_INSTALL_DIR/remove_path.sh'
 # EOF
@@ -387,6 +388,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	conda config --env --set channel_priority strict
 	conda install $CFG_AUTO_YES cython
 	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
+	# TODO: conda install for TensorRT if [[ -n "$CFG_TENSORRT_URL" ]]
 	conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pybind11 pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
 	conda install $CFG_AUTO_YES decorator appdirs mako numpy six platformdirs  # For pip packages
 	conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
@@ -407,6 +409,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	echo "Installing pip packages..."
 	pip install --no-deps --no-cache-dir pycuda pytools
 	echo
+	# TODO: pip install TensorRT if [[ -n "$CFG_TENSORRT_URL" ]]
 	echo "Performing pip check..."
 	pip check
 	echo
