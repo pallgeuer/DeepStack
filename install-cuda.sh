@@ -94,11 +94,11 @@ UNINSTALLER_SCRIPT="$UNINSTALLERS_DIR/uninstall-$CFG_CUDA_NAME.sh"
 echo "Creating uninstaller script: $UNINSTALLER_SCRIPT"
 [[ ! -d "$UNINSTALLERS_DIR" ]] && mkdir "$UNINSTALLERS_DIR"
 read -r -d '' UNINSTALLER_HEADER << EOM || true
-#!/bin/bash -x
+#!/bin/bash
 # Uninstall $CFG_CUDA_NAME
 
 # Use bash strict mode
-set -euo pipefail
+set -xeuo pipefail
 EOM
 read -r -d '' UNINSTALLER_CONTENTS << EOM || true
 # Remove this uninstaller script
