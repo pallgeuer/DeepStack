@@ -157,7 +157,7 @@ INSTALLERS_DIR="$CFG_ROOT_DIR/Installers"
 if [[ -n "$CFG_TENSORRT_URL" ]]; then
 	TENSORRT_TARNAME="${CFG_TENSORRT_URL##*/}"
 	TENSORRT_TAR="$INSTALLERS_DIR/$TENSORRT_TARNAME"
-	if [[ "$TENSORRT_TARNAME" =~ ^([a-zA-Z]+-[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\..*$ ]]; then
+	if [[ "$TENSORRT_TARNAME" =~ ^([a-zA-Z]+-[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?)\..*$ ]]; then
 		TENSORRT_DIRNAME="${BASH_REMATCH[1]}"
 	else
 		echo "Failed to parse TensorRT directory name from: $TENSORRT_TARNAME"
@@ -210,8 +210,8 @@ TORCHVISION_GIT_DIR="$ENV_DIR/torchvision"
 OPENCV_GIT_DIR="$ENV_DIR/opencv"
 OPENCV_CONTRIB_GIT_DIR="$ENV_DIR/opencv_contrib"
 MAIN_TENSORRT_DIR="$CFG_ROOT_DIR/TensorRT"
-LOCAL_TENSORRT_DIR="$MAIN_TENSORRT_DIR/$TENSORRT_DIRNAME"
-TENSORRT_ENVS_LIST="$LOCAL_TENSORRT_DIR/envs.list"
+TENSORRT_INSTALL_DIR="$MAIN_TENSORRT_DIR/$TENSORRT_DIRNAME"
+TENSORRT_ENVS_LIST="$TENSORRT_INSTALL_DIR/envs.list"
 
 # Stage 2 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
@@ -223,7 +223,7 @@ EOM
 if [[ -n "$CFG_TENSORRT_URL" ]]; then
 	read -r -d '' EXTRA_UNINSTALLER_COMMANDS << EOM || true
 [[ -f '$TENSORRT_ENVS_LIST' ]] && { grep -vFx '$CFG_CONDA_ENV'$'\n' '$TENSORRT_ENVS_LIST' > '${TENSORRT_ENVS_LIST}.tmp'; mv '${TENSORRT_ENVS_LIST}.tmp' '$TENSORRT_ENVS_LIST'; }
-[[ "\$(cat '$TENSORRT_ENVS_LIST' 2>/dev/null | wc -l)" -eq 0 ]] && rm -rf '$LOCAL_TENSORRT_DIR'
+[[ "\$(cat '$TENSORRT_ENVS_LIST' 2>/dev/null | wc -l)" -eq 0 ]] && rm -rf '$TENSORRT_INSTALL_DIR'
 rmdir --ignore-fail-on-non-empty '$MAIN_TENSORRT_DIR' || true
 EOM
 	UNINSTALLER_COMMANDS+=$'\n'"$EXTRA_UNINSTALLER_COMMANDS"
@@ -287,9 +287,9 @@ echo
 if [[ -n "$CFG_TENSORRT_URL" ]]; then
 	echo "Unpacking TensorRT $CFG_TENSORRT_VERSION..."
 	[[ ! -d "$MAIN_TENSORRT_DIR" ]] && mkdir "$MAIN_TENSORRT_DIR"
-	if [[ ! -d "$LOCAL_TENSORRT_DIR" ]]; then
+	if [[ ! -d "$TENSORRT_INSTALL_DIR" ]]; then
 		tar -xf "$TENSORRT_TAR" -C "$MAIN_TENSORRT_DIR"
-		if [[ ! -d "$LOCAL_TENSORRT_DIR" ]]; then
+		if [[ ! -d "$TENSORRT_INSTALL_DIR" ]]; then
 			echo "TensorRT tar unpacking failed or unpacked to an unexpected directory name (should be $TENSORRT_DIRNAME): $TENSORRT_TAR"
 			exit 1
 		fi
@@ -298,7 +298,106 @@ if [[ -n "$CFG_TENSORRT_URL" ]]; then
 		echo "$CFG_CONDA_ENV" >> "$TENSORRT_ENVS_LIST"
 	fi
 	echo
-	# TODO: Create add_path.sh / remove_path.sh scripts if they don't exist!
+	echo "Creating TensorRT path management scripts..."
+	read -r -d '' TENSORRT_ADD_PATH_CONTENTS << 'EOM' || true
+#!/bin/bash
+# Add TensorRT paths to the current environment
+# Usage:
+#   source #TENSORRT_INSTALL_DIR#/add_path.sh
+# Check the results using:
+#   echo "$TENSORRT_PATH"    # --> Custom variable specifying the (single) TensorRT installation path
+#   echo "$PATH"             # --> For finding binaries to run
+#   echo "$LIBRARY_PATH"     # --> For finding libraries to link at compile time
+#   echo "$LD_LIBRARY_PATH"  # --> For finding shared libraries to link at runtime
+
+# Ensure this script is being sourced not run
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	echo "Error: This script should be sourced, not run!"
+	exit 1
+fi
+
+# Ensure that we don't overwrite any existing bash functions
+if type __PrependPath &>/dev/null; then
+	echo "Error: __PrependPath function already exists in environment => Aborting script to avoid conflicts..."
+	return 1
+fi
+
+# Heuristically check that no other TensorRT installations are currently on the path
+search_path="$TENSORRT_PATH:$PATH:$LIBRARY_PATH:$LD_LIBRARY_PATH"
+while read match; do
+	if [[ "$match" != "/#TENSORRT_DIRNAME#/" ]]; then
+		echo "Error: Another TensorRT installation (not #TENSORRT_DIRNAME#) is already detected on the path => Aborting..."
+		echo
+		echo "TENSORRT_PATH: $TENSORRT_PATH"
+		echo "PATH: $PATH"
+		echo "LIBRARY_PATH: $LIBRARY_PATH"
+		echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+		return 1
+	fi
+done < <(egrep -oi "/TensorRT-[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?/" <<< "$search_path")
+
+# Function to prepend an item to a path if it is not already there
+function __PrependPath() { local __args __item; for __args in "${@:2}"; do [[ -n "${!1}" ]] && while IFS= read -r -d ':' __item; do [[ "$__item" == "$__args" ]] && continue 2; done <<< "${!1}:"; ([[ -n "${!1#:}" ]] || [[ -z "$__args" ]]) && __args+=':'; export "${1}"="$__args${!1}"; done; }
+
+# Custom exported variables
+export TENSORRT_PATH="#TENSORRT_INSTALL_DIR#"
+
+# Add the required TensorRT directories to the environment paths
+__PrependPath PATH "$TENSORRT_PATH/bin"
+__PrependPath LD_LIBRARY_PATH "$TENSORRT_PATH/lib"
+
+# Unset the function we have created
+unset -f __PrependPath
+# EOF
+EOM
+	read -r -d '' TENSORRT_REMOVE_PATH_CONTENTS << 'EOM' || true
+#!/bin/bash
+# Remove TensorRT paths to the current environment
+# Usage:
+#   source #TENSORRT_INSTALL_DIR#/remove_path.sh
+# Check the results using:
+#   echo "$TENSORRT_PATH"    # --> Custom variable specifying the (single) TensorRT installation path
+#   echo "$PATH"             # --> For finding binaries to run
+#   echo "$LIBRARY_PATH"     # --> For finding libraries to link at compile time
+#   echo "$LD_LIBRARY_PATH"  # --> For finding shared libraries to link at runtime
+
+# Ensure this script is being sourced (not run)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	echo "Error: This script should be sourced, not run!"
+	exit 1
+fi
+
+# Ensure that we don't overwrite any existing bash functions
+if type __RemovePath &>/dev/null; then
+	echo "Error: __RemovePath function already exists in environment => Aborting script to avoid conflicts..."
+	return 1
+fi
+
+# Function to remove all instances of an item from a path
+function __RemovePath() { local __item __args __path=; [[ -n "${!1}" ]] && while IFS= read -r -d ':' __item; do for __args in "${@:2}"; do [[ "$__item" == "$__args" ]] && continue 2; done; __path="$__path:$__item"; done <<< "${!1}:"; [[ "$__path" != ":" ]] && __path="${__path#:}"; export "${1}"="$__path"; }
+
+# Custom exported variables
+OUR_TENSORRT_PATH="#TENSORRT_INSTALL_DIR#"
+[[ "$TENSORRT_PATH" == "$OUR_TENSORRT_PATH" ]] && unset TENSORRT_PATH
+
+# Remove the required TensorRT directories from the environment paths
+__RemovePath PATH "$OUR_TENSORRT_PATH/bin"
+__RemovePath LD_LIBRARY_PATH "$OUR_TENSORRT_PATH/lib"
+
+# Unset the function we have created
+unset -f __RemovePath
+# EOF
+EOM
+	TENSORRT_ADD_PATH_CONTENTS="${TENSORRT_ADD_PATH_CONTENTS//#TENSORRT_INSTALL_DIR#/$TENSORRT_INSTALL_DIR}"
+	TENSORRT_ADD_PATH_CONTENTS="${TENSORRT_ADD_PATH_CONTENTS//#TENSORRT_DIRNAME#/$TENSORRT_DIRNAME}"
+	TENSORRT_REMOVE_PATH_CONTENTS="${TENSORRT_REMOVE_PATH_CONTENTS//#TENSORRT_INSTALL_DIR#/$TENSORRT_INSTALL_DIR}"
+	TENSORRT_ADD_PATH="$TENSORRT_INSTALL_DIR/add_path.sh"
+	TENSORRT_REMOVE_PATH="$TENSORRT_INSTALL_DIR/remove_path.sh"
+	echo "$TENSORRT_ADD_PATH_CONTENTS" > "$TENSORRT_ADD_PATH"
+	echo "Created: $TENSORRT_ADD_PATH"
+	echo "$TENSORRT_REMOVE_PATH_CONTENTS" > "$TENSORRT_REMOVE_PATH"
+	echo "Created: $TENSORRT_REMOVE_PATH"
+	echo
 fi
 
 # Stop if stage limit reached
@@ -358,14 +457,21 @@ if [ -n "$SUPPRESSED_PYTHONPATH" ]; then
 fi
 # EOF
 EOM
-cat << EOM > "$CONDA_ENV_DIR/etc/conda/activate.d/env_vars.sh"  # TODO: Add TensorRT path if [[ -n "$CFG_TENSORRT_URL" ]]
+if [[ -n "$CFG_TENSORRT_URL" ]]; then
+	SOURCE_TENSORRT_ADD=$'\n'"source '$TENSORRT_INSTALL_DIR/add_path.sh'"
+	SOURCE_TENSORRT_REMOVE=$'\n'"source '$TENSORRT_INSTALL_DIR/remove_path.sh'"
+else
+	SOURCE_TENSORRT_ADD=
+	SOURCE_TENSORRT_REMOVE=
+fi
+cat << EOM > "$CONDA_ENV_DIR/etc/conda/activate.d/env_vars.sh"
 #!/bin/sh
-source '$CUDA_INSTALL_DIR/add_path.sh'
+source '$CUDA_INSTALL_DIR/add_path.sh'$SOURCE_TENSORRT_ADD
 # EOF
 EOM
-cat << EOM > "$CONDA_ENV_DIR/etc/conda/deactivate.d/env_vars.sh"  # TODO: Remove TensorRT path if [[ -n "$CFG_TENSORRT_URL" ]]
+cat << EOM > "$CONDA_ENV_DIR/etc/conda/deactivate.d/env_vars.sh"
 #!/bin/sh
-source '$CUDA_INSTALL_DIR/remove_path.sh'
+source '$CUDA_INSTALL_DIR/remove_path.sh'$SOURCE_TENSORRT_REMOVE
 # EOF
 EOM
 chmod +x "$CONDA_ENV_DIR/etc/conda/activate.d/pythonpath.sh" "$CONDA_ENV_DIR/etc/conda/deactivate.d/pythonpath.sh" "$CONDA_ENV_DIR/etc/conda/activate.d/env_vars.sh" "$CONDA_ENV_DIR/etc/conda/deactivate.d/env_vars.sh"
@@ -388,7 +494,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	conda config --env --set channel_priority strict
 	conda install $CFG_AUTO_YES cython
 	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
-	# TODO: conda install for TensorRT if [[ -n "$CFG_TENSORRT_URL" ]]
+	[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six setuptools protobuf libprotobuf  # For TensorRT
 	conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pybind11 pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
 	conda install $CFG_AUTO_YES decorator appdirs mako numpy six platformdirs  # For pip packages
 	conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
@@ -409,7 +515,15 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	echo "Installing pip packages..."
 	pip install --no-deps --no-cache-dir pycuda pytools
 	echo
-	# TODO: pip install TensorRT if [[ -n "$CFG_TENSORRT_URL" ]]
+	if [[ -n "$CFG_TENSORRT_URL" ]]; then
+		echo "Installing TensorRT..."
+		CONDA_PYTHON_CODE="$(sed 's/^\([0-9]\+\)\.\([0-9]\+\).*$/\1\2/' <<< "$CFG_CONDA_PYTHON")"
+		pip install --no-deps "$TENSORRT_INSTALL_DIR/python/$(tr "[:upper:]" "[:lower:]" <<< "$TENSORRT_DIRNAME")-cp$CONDA_PYTHON_CODE-"*.whl
+		pip install --no-deps "$TENSORRT_INSTALL_DIR/uff/uff-"*.whl
+		pip install --no-deps "$TENSORRT_INSTALL_DIR/graphsurgeon/graphsurgeon-"*.whl
+		[[ -d "$TENSORRT_INSTALL_DIR/onnx_graphsurgeon" ]] && pip install --no-deps "$TENSORRT_INSTALL_DIR/onnx_graphsurgeon/onnx_graphsurgeon-"*.whl
+		echo
+	fi
 	echo "Performing pip check..."
 	pip check
 	echo
