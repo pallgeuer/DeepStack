@@ -17,6 +17,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Whether to stop after a particular stage
 CFG_STAGE="${CFG_STAGE:-0}"
 
+# Whether to skip installation steps that are not strictly necessary in order to save time
+CFG_QUICK="${CFG_QUICK:-}"
+
 # Whether to have faith and auto-answer all prompts
 CFG_AUTO_ANSWER="${CFG_AUTO_ANSWER:-0}"
 
@@ -75,6 +78,7 @@ CFG_TENSORRT_URL="${CFG_TENSORRT_URL%/}"
 # Display the configuration
 echo
 echo "CFG_STAGE = $CFG_STAGE"
+echo "CFG_QUICK = $CFG_QUICK"
 echo "CFG_AUTO_ANSWER = $CFG_AUTO_ANSWER"
 echo "CFG_ROOT_DIR = $CFG_ROOT_DIR"
 echo "CFG_CUDA_VERSION = $CFG_CUDA_VERSION"
@@ -212,6 +216,7 @@ OPENCV_CONTRIB_GIT_DIR="$ENV_DIR/opencv_contrib"
 MAIN_TENSORRT_DIR="$CFG_ROOT_DIR/TensorRT"
 TENSORRT_INSTALL_DIR="$MAIN_TENSORRT_DIR/$TENSORRT_DIRNAME"
 TENSORRT_ENVS_LIST="$TENSORRT_INSTALL_DIR/envs.list"
+TENSORRT_SAMPLES_COMPILED="$TENSORRT_INSTALL_DIR/samples/compiled"
 
 # Stage 2 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
@@ -222,7 +227,10 @@ rmdir --ignore-fail-on-non-empty '$ENVS_DIR' || true
 EOM
 if [[ -n "$CFG_TENSORRT_URL" ]]; then
 	read -r -d '' EXTRA_UNINSTALLER_COMMANDS << EOM || true
-[[ -f '$TENSORRT_ENVS_LIST' ]] && { grep -vFx '$CFG_CONDA_ENV'$'\n' '$TENSORRT_ENVS_LIST' > '${TENSORRT_ENVS_LIST}.tmp'; mv '${TENSORRT_ENVS_LIST}.tmp' '$TENSORRT_ENVS_LIST'; }
+( cd '$TENSORRT_INSTALL_DIR/samples'; export CUDA_INSTALL_DIR='$CUDA_INSTALL_DIR'; export CUDNN_INSTALL_DIR="\$CUDA_INSTALL_DIR"; make clean >/dev/null; )
+rm -rf '$TENSORRT_INSTALL_DIR/bintmp'
+rm -f '$TENSORRT_SAMPLES_COMPILED'
+[[ -f '$TENSORRT_ENVS_LIST' ]] && { grep -vFx '$CFG_CONDA_ENV'$'\n' '$TENSORRT_ENVS_LIST' > '${TENSORRT_ENVS_LIST}.tmp' || true; mv '${TENSORRT_ENVS_LIST}.tmp' '$TENSORRT_ENVS_LIST'; }
 [[ "\$(cat '$TENSORRT_ENVS_LIST' 2>/dev/null | wc -l)" -eq 0 ]] && rm -rf '$TENSORRT_INSTALL_DIR'
 rmdir --ignore-fail-on-non-empty '$MAIN_TENSORRT_DIR' || true
 EOM
@@ -288,6 +296,7 @@ if [[ -n "$CFG_TENSORRT_URL" ]]; then
 	echo "Unpacking TensorRT $CFG_TENSORRT_VERSION..."
 	[[ ! -d "$MAIN_TENSORRT_DIR" ]] && mkdir "$MAIN_TENSORRT_DIR"
 	if [[ ! -d "$TENSORRT_INSTALL_DIR" ]]; then
+		echo "Unpacking: $TENSORRT_TAR"
 		tar -xf "$TENSORRT_TAR" -C "$MAIN_TENSORRT_DIR"
 		if [[ ! -d "$TENSORRT_INSTALL_DIR" ]]; then
 			echo "TensorRT tar unpacking failed or unpacked to an unexpected directory name (should be $TENSORRT_DIRNAME): $TENSORRT_TAR"
@@ -397,6 +406,55 @@ EOM
 	echo "Created: $TENSORRT_ADD_PATH"
 	echo "$TENSORRT_REMOVE_PATH_CONTENTS" > "$TENSORRT_REMOVE_PATH"
 	echo "Created: $TENSORRT_REMOVE_PATH"
+	echo
+	echo "Compiling the TensorRT samples as a test..."
+	if [[ -z "$CFG_QUICK" ]] && [[ ! -f "$TENSORRT_SAMPLES_COMPILED" ]]; then
+		(
+			cd "$TENSORRT_INSTALL_DIR/samples"
+			sed -i 's|^\(OUT_PATH=\$(ROOT_PATH)/bin\)$|\1tmp|' "$TENSORRT_INSTALL_DIR/samples/Makefile.config"
+			if ! grep -qFx 'OUT_PATH=$(ROOT_PATH)/bintmp' "$TENSORRT_INSTALL_DIR/samples/Makefile.config"; then
+				echo "Failed to adjust output directory for TensorRT samples compilation"
+				exit 1
+			fi
+			set +u
+			source "$CUDA_INSTALL_DIR/add_path.sh"
+			set -u
+			export CUDA_INSTALL_DIR
+			export CUDNN_INSTALL_DIR="$CUDA_INSTALL_DIR"
+			echo "make -j$(nproc)"
+			time make -j"$(nproc)"
+			echo
+			(
+				echo "Preparing MNIST data..."
+				if [[ ! -f "$TENSORRT_INSTALL_DIR/data/mnist/0.pgm" ]]; then
+					cd "$TENSORRT_INSTALL_DIR/data/mnist"
+					"$TENSORRT_INSTALL_DIR/data/mnist/download_pgms.py"
+					find "$TENSORRT_INSTALL_DIR/data/mnist" -type f -name "*.pgm" | sort
+				fi
+				echo
+				set +u
+				source "$TENSORRT_INSTALL_DIR/add_path.sh"
+				set -u
+				cd "$TENSORRT_INSTALL_DIR/bintmp"
+				echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_mnist"
+				"$TENSORRT_INSTALL_DIR/bintmp/sample_mnist"
+				echo
+				echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_mnist_api"
+				"$TENSORRT_INSTALL_DIR/bintmp/sample_mnist_api"
+				echo
+				echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_onnx_mnist"
+				"$TENSORRT_INSTALL_DIR/bintmp/sample_onnx_mnist"
+				echo
+				echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_uff_mnist"
+				"$TENSORRT_INSTALL_DIR/bintmp/sample_uff_mnist"
+				echo
+			)
+			touch "$TENSORRT_SAMPLES_COMPILED"
+			echo "Cleaning up TensorRT samples build..."
+			make clean >/dev/null
+			rm -rf "$TENSORRT_INSTALL_DIR/bintmp"
+		)
+	fi
 	echo
 fi
 
