@@ -737,6 +737,8 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -
 		if [[ -n "$CFG_TENSORRT_URL" ]] && [[ -n "$CFG_TENSORRT_PYTORCH" ]]; then
 			export USE_TENSORRT=ON
 			export TENSORRT_ROOT="$TENSORRT_INSTALL_DIR"
+		else
+			export USE_TENSORRT=OFF
 		fi
 		RETRIED=
 		while ! time python setup.py build; do
