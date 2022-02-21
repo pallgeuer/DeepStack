@@ -1,8 +1,7 @@
 #!/bin/bash -i
 # Install PyTorch into a conda environment
 # Alternatively if you're looking into having a Docker build of PyTorch:
-#   https://github.com/veritas9872/PyTorch-Universal-Docker-Template  [OLD NAME]
-#   https://github.com/veritas9872/Cresset                            [NEW NAME]
+#   https://github.com/cresset-template/cresset
 
 # Use bash strict mode
 set -euo pipefail
@@ -46,9 +45,10 @@ CFG_OPENCV_VERSION="${CFG_OPENCV_VERSION:-$CFG_OPENCV_TAG}"
 CFG_OPENCV_HEADLESS="${CFG_OPENCV_HEADLESS:-0}"
 CFG_OPENCV_CMAKE="${CFG_OPENCV_CMAKE:-}"  # Note: This is not expansion-safe
 
-# TensorRT version and URL to use (https://developer.nvidia.com/nvidia-tensorrt-download -> TensorRT X -> Agree to the terms -> TensorRT X.X.X for Linux x86_64/Ubuntu YY.YY and CUDA Z.Z TAR package -> Fix URL capitalisation if necessary)
+# TensorRT version and URL to use, and whether to explicitly compile it into PyTorch (https://developer.nvidia.com/nvidia-tensorrt-download -> TensorRT X -> Agree to the terms -> TensorRT X.X.X for Linux x86_64/Ubuntu YY.YY and CUDA Z.Z TAR package -> Fix URL capitalisation if necessary)
 CFG_TENSORRT_VERSION="${CFG_TENSORRT_VERSION:-}"
 CFG_TENSORRT_URL="${CFG_TENSORRT_URL:-}"
+CFG_TENSORRT_PYTORCH="${CFG_TENSORRT_PYTORCH:-1}"
 
 # Name to use for the created conda environment
 CFG_CONDA_ENV="${CFG_CONDA_ENV:-$CFG_PYTORCH_NAME-$CFG_CUDA_NAME}"
@@ -73,6 +73,7 @@ CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
 CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 [[ "$CFG_OPENCV_HEADLESS" != "0" ]] && CFG_OPENCV_HEADLESS="1"
 CFG_TENSORRT_URL="${CFG_TENSORRT_URL%/}"
+[[ "$CFG_TENSORRT_PYTORCH" != "1" ]] && CFG_TENSORRT_PYTORCH="0"
 [[ "$CFG_CONDA_CREATE" != "1" ]] && CFG_CONDA_CREATE="0"
 
 # Display the configuration
@@ -95,6 +96,7 @@ echo "CFG_OPENCV_HEADLESS = $CFG_OPENCV_HEADLESS"
 echo "CFG_OPENCV_CMAKE = $CFG_OPENCV_CMAKE"
 echo "CFG_TENSORRT_VERSION = $CFG_TENSORRT_VERSION"
 echo "CFG_TENSORRT_URL = $CFG_TENSORRT_URL"
+echo "CFG_TENSORRT_PYTORCH = $CFG_TENSORRT_PYTORCH"
 echo "CFG_CONDA_CREATE = $CFG_CONDA_CREATE"
 echo "CFG_CONDA_ENV = $CFG_CONDA_ENV"
 echo "CFG_CONDA_PYTHON = $CFG_CONDA_PYTHON"
@@ -259,6 +261,10 @@ if [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
 		git submodule update --init --recursive
 		git submodule status
 		[[ -f "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc" ]] && sed -i 's/TORCH_WARN("Leaking Caffe2 thread-pool after fork.");/;/g' "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc"
+		if [[ -n "$CFG_TENSORRT_URL" ]]; then
+			[[ -f "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py" ]] && sed -i "s/'BUILD_', 'USE_', 'CMAKE_'/&, 'TENSORRT_'/" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
+			[[ -f "$PYTORCH_GIT_DIR/caffe2/contrib/tensorrt/tensorrt_tranformer.cc" ]] && sed -i "s/^\s*auto cutResult = opt::OptimizeForBackend(\*pred_net, supports, trt_converter)$/&;/" "$PYTORCH_GIT_DIR/caffe2/contrib/tensorrt/tensorrt_tranformer.cc"
+		fi
 	)
 fi
 echo
@@ -562,7 +568,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	conda config --env --set channel_priority strict
 	conda install $CFG_AUTO_YES cython
 	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
-	[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six setuptools protobuf libprotobuf  # For TensorRT
+	[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six setuptools onnx protobuf libprotobuf  # For TensorRT
 	conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pybind11 pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
 	conda install $CFG_AUTO_YES decorator appdirs mako numpy six platformdirs  # For pip packages
 	conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
@@ -728,6 +734,10 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -
 		export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
 		export BUILD_BINARY=ON BUILD_TEST=OFF BUILD_DOCS=OFF BUILD_SHARED_LIBS=ON BUILD_CUSTOM_PROTOBUF=ON
 		export USE_CUDNN=ON USE_FFMPEG=ON USE_GFLAGS=OFF USE_GLOG=OFF USE_OPENCV=ON
+		if [[ -n "$CFG_TENSORRT_URL" ]] && [[ -n "$CFG_TENSORRT_PYTORCH" ]]; then
+			export USE_TENSORRT=ON
+			export TENSORRT_ROOT="$TENSORRT_INSTALL_DIR"
+		fi
 		RETRIED=
 		while ! time python setup.py build; do
 			echo
@@ -773,6 +783,18 @@ pprint.pprint({
 print(torch.rand(5, 3))
 EOM
 		echo
+		if [[ -n "$CFG_TENSORRT_URL" ]] && [[ -n "$CFG_TENSORRT_PYTORCH" ]]; then
+			echo "Checking PyTorch TensorRT is available in python..."
+			python - << EOM
+from caffe2.python import workspace
+from caffe2.python.trt.transform import convert_onnx_model_to_trt_op, transform_caffe2_net
+if workspace.C.use_trt:
+	print("TensorRT is supported within PyTorch/Caffe2")
+else:
+	print("No TensorRT support in PyTorch/Caffe2")
+EOM
+			echo
+		fi
 		echo "Removing build directory..."
 		rm -rf "$PYTORCH_BUILD_DIR"
 	)
