@@ -227,8 +227,9 @@ rmdir --ignore-fail-on-non-empty '$ENVS_DIR' || true
 EOM
 if [[ -n "$CFG_TENSORRT_URL" ]]; then
 	read -r -d '' EXTRA_UNINSTALLER_COMMANDS << EOM || true
-( cd '$TENSORRT_INSTALL_DIR/samples'; export CUDA_INSTALL_DIR='$CUDA_INSTALL_DIR'; export CUDNN_INSTALL_DIR="\$CUDA_INSTALL_DIR"; make clean >/dev/null; )
+( cd '$TENSORRT_INSTALL_DIR/samples'; export CUDA_INSTALL_DIR='$CUDA_INSTALL_DIR'; export CUDNN_INSTALL_DIR="\$CUDA_INSTALL_DIR"; export TRT_LIB_DIR='$TENSORRT_INSTALL_DIR/lib'; export PROTOBUF_INSTALL_DIR=/usr/lib/x86_64-linux-gnu; make clean >/dev/null; )
 rm -rf '$TENSORRT_INSTALL_DIR/bintmp'
+rm -f '$TENSORRT_INSTALL_DIR/data/mnist/'{train,t10k}-{images,labels}-*
 rm -f '$TENSORRT_SAMPLES_COMPILED'
 [[ -f '$TENSORRT_ENVS_LIST' ]] && { grep -vFx '$CFG_CONDA_ENV'$'\n' '$TENSORRT_ENVS_LIST' > '${TENSORRT_ENVS_LIST}.tmp' || true; mv '${TENSORRT_ENVS_LIST}.tmp' '$TENSORRT_ENVS_LIST'; }
 [[ "\$(cat '$TENSORRT_ENVS_LIST' 2>/dev/null | wc -l)" -eq 0 ]] && rm -rf '$TENSORRT_INSTALL_DIR'
@@ -411,8 +412,8 @@ EOM
 	if [[ -z "$CFG_QUICK" ]] && [[ ! -f "$TENSORRT_SAMPLES_COMPILED" ]]; then
 		(
 			cd "$TENSORRT_INSTALL_DIR/samples"
-			sed -i 's|^\(OUT_PATH=\$(ROOT_PATH)/bin\)$|\1tmp|' "$TENSORRT_INSTALL_DIR/samples/Makefile.config"
-			if ! grep -qFx 'OUT_PATH=$(ROOT_PATH)/bintmp' "$TENSORRT_INSTALL_DIR/samples/Makefile.config"; then
+			sed -i 's|^\(\s*OUT_PATH\s*=\s*\$(ROOT_PATH)/bin\)$|\1tmp|' "$TENSORRT_INSTALL_DIR/samples/Makefile.config"
+			if ! egrep -qx '\s*OUT_PATH\s*=\s*\$\(ROOT_PATH\)/bintmp' "$TENSORRT_INSTALL_DIR/samples/Makefile.config"; then
 				echo "Failed to adjust output directory for TensorRT samples compilation"
 				exit 1
 			fi
@@ -421,15 +422,24 @@ EOM
 			set -u
 			export CUDA_INSTALL_DIR
 			export CUDNN_INSTALL_DIR="$CUDA_INSTALL_DIR"
-			echo "make -j$(nproc)"
-			time make -j"$(nproc)"
+			export TRT_LIB_DIR="$TENSORRT_INSTALL_DIR/lib"
+			export PROTOBUF_INSTALL_DIR=/usr/lib/x86_64-linux-gnu
+			echo "make"
+			time make  # Note: Not multiple jobs as the samples explicitly specify .NOTPARALLEL
 			echo
 			(
 				echo "Preparing MNIST data..."
 				if [[ ! -f "$TENSORRT_INSTALL_DIR/data/mnist/0.pgm" ]]; then
 					cd "$TENSORRT_INSTALL_DIR/data/mnist"
-					"$TENSORRT_INSTALL_DIR/data/mnist/download_pgms.py"
-					find "$TENSORRT_INSTALL_DIR/data/mnist" -type f -name "*.pgm" | sort
+					if [[ -f "$TENSORRT_INSTALL_DIR/data/mnist/download_pgms.py" ]]; then
+						"$TENSORRT_INSTALL_DIR/data/mnist/download_pgms.py"
+					elif [[ -f "$TENSORRT_INSTALL_DIR/data/mnist/generate_pgms.py" ]]; then
+						wget -nc http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+						gunzip *.gz
+						"$TENSORRT_INSTALL_DIR/data/mnist/generate_pgms.py"
+						rm -f {train,t10k}-{images,labels}-*
+					fi
+					ls -1 "$TENSORRT_INSTALL_DIR/data/mnist"/*.pgm
 				fi
 				echo
 				set +u
