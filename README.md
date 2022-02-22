@@ -1,6 +1,7 @@
 # Deep Learning Stack
 
 **Version:** 1.0
+
 **Author:** Philipp Allgeuer
 
 Setting up a deep learning stack can be quite a complex and involved task,
