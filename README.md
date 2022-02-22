@@ -20,7 +20,8 @@ than others due to library dependencies and cross-compatibilities. This
 repository has so far been tested on selected combinations of the following
 component versions:
 
- * **Ubuntu:** 18.04, 20.04 (Linux x86_64)
+ * **Ubuntu:** 18.04, 20.04 (x86_64)
+ * **Conda:** 4.8.2 to 4.11.0
  * **NVIDIA driver:** 470 to 510
  * **Python:** 3.6 to 3.9
  * **CUDA:** 10.1 to 11.5
@@ -165,7 +166,34 @@ rough indication of the computational power of your GPU.
 
 ### Conda distribution
 
-TODO: Installation guide for Anaconda/Miniconda
+Refer to the installation instructions for
+[Anaconda](https://docs.anaconda.com/anaconda/install/linux) or
+[Miniconda](https://docs.conda.io/en/latest/miniconda.html#linux-installers).
+Maybe you need
+[help deciding whether Anaconda or Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/download.html#anaconda-or-miniconda)?
+
+In the Anaconda install instructions (use these instructions also for
+Miniconda), if you have Ubuntu you need to install the prerequisites for Debian
+(i.e. the `apt` command). I also recommend configuring conda at the end to not
+auto-activate using:
+```
+conda config --set auto_activate_base False
+```
+You should also make sure you have the latest conda binary in the base
+environment:
+```
+conda update -n base -c defaults conda
+```
+Maybe now is also the right time to think about getting the IDE [PyCharm for
+Anaconda](https://www.anaconda.com/pycharm) if you want an easy life.
+
+Note that the script that installs PyTorch with TensorRT support compiles and
+runs some test samples in order to check that the installation of TensorRT was
+successful. This is prior to the creation of an associated conda environment (as
+it may be a one-to-many mapping), so it briefly assumes there is a system-wide
+Python 3 version available that has `numpy` and `Pillow` installed. This should
+generally not be a problem, but if you wish to avoid this then specify
+`CFG_QUICK=1`.
 
 ## Installation
 
