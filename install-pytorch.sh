@@ -734,7 +734,7 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -
 		export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
 		export BUILD_BINARY=ON BUILD_TEST=OFF BUILD_DOCS=OFF BUILD_SHARED_LIBS=ON BUILD_CUSTOM_PROTOBUF=ON
 		export USE_CUDNN=ON USE_FFMPEG=ON USE_GFLAGS=OFF USE_GLOG=OFF USE_OPENCV=ON
-		if [[ -n "$CFG_TENSORRT_URL" ]] && [[ -n "$CFG_TENSORRT_PYTORCH" ]]; then
+		if [[ -n "$CFG_TENSORRT_URL" ]] && [[ "$CFG_TENSORRT_PYTORCH" == 1 ]]; then
 			export USE_TENSORRT=ON
 			export TENSORRT_ROOT="$TENSORRT_INSTALL_DIR"
 		else
@@ -785,7 +785,7 @@ pprint.pprint({
 print(torch.rand(5, 3))
 EOM
 		echo
-		if [[ -n "$CFG_TENSORRT_URL" ]] && [[ -n "$CFG_TENSORRT_PYTORCH" ]]; then
+		if [[ -n "$CFG_TENSORRT_URL" ]] && [[ "$CFG_TENSORRT_PYTORCH" == 1 ]]; then
 			echo "Checking PyTorch TensorRT is available in python..."
 			python - << EOM
 from caffe2.python import workspace
