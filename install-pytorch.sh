@@ -39,6 +39,14 @@ CFG_PYTORCH_NAME="${CFG_PYTORCH_NAME:-pytorch-$CFG_PYTORCH_VERSION}"
 CFG_TORCHVISION_TAG="${CFG_TORCHVISION_TAG:-}"  # Example: v0.11.3
 CFG_TORCHVISION_VERSION="${CFG_TORCHVISION_VERSION:-${CFG_TORCHVISION_TAG#v}}"
 
+# Optional torchaudio git tag and version (see https://github.com/pytorch/audio#dependencies for compatibility, tag should be one of these: https://github.com/pytorch/audio/tags)
+CFG_TORCHAUDIO_TAG="${CFG_TORCHAUDIO_TAG:-}"  # Example: v0.10.2
+CFG_TORCHAUDIO_VERSION="${CFG_TORCHAUDIO_VERSION:-${CFG_TORCHAUDIO_TAG#v}}"
+
+# Optional torchtext git tag and version (see https://github.com/pytorch/text#installation for compatibility, tag should be one of these: https://github.com/pytorch/text/tags)
+CFG_TORCHTEXT_TAG="${CFG_TORCHTEXT_TAG:-}"  # Example: v0.11.2
+CFG_TORCHTEXT_VERSION="${CFG_TORCHTEXT_VERSION:-${CFG_TORCHTEXT_TAG#v}}"
+
 # OpenCV git tag and version (tag should be one of these: https://github.com/opencv/opencv/tags)
 # Example: CFG_OPENCV_TAG=4.5.5
 CFG_OPENCV_VERSION="${CFG_OPENCV_VERSION:-$CFG_OPENCV_TAG}"
@@ -90,6 +98,10 @@ echo "CFG_PYTORCH_VERSION = $CFG_PYTORCH_VERSION"
 echo "CFG_PYTORCH_NAME = $CFG_PYTORCH_NAME"
 echo "CFG_TORCHVISION_TAG = $CFG_TORCHVISION_TAG"
 echo "CFG_TORCHVISION_VERSION = $CFG_TORCHVISION_VERSION"
+echo "CFG_TORCHAUDIO_TAG = $CFG_TORCHAUDIO_TAG"
+echo "CFG_TORCHAUDIO_VERSION = $CFG_TORCHAUDIO_VERSION"
+echo "CFG_TORCHTEXT_TAG = $CFG_TORCHTEXT_TAG"
+echo "CFG_TORCHTEXT_VERSION = $CFG_TORCHTEXT_VERSION"
 echo "CFG_OPENCV_TAG = $CFG_OPENCV_TAG"
 echo "CFG_OPENCV_VERSION = $CFG_OPENCV_VERSION"
 echo "CFG_OPENCV_HEADLESS = $CFG_OPENCV_HEADLESS"
@@ -214,6 +226,8 @@ ENVS_DIR="$CFG_ROOT_DIR/envs"
 ENV_DIR="$ENVS_DIR/$CFG_CONDA_ENV"
 PYTORCH_GIT_DIR="$ENV_DIR/pytorch"
 TORCHVISION_GIT_DIR="$ENV_DIR/torchvision"
+TORCHAUDIO_GIT_DIR="$ENV_DIR/torchaudio"
+TORCHTEXT_GIT_DIR="$ENV_DIR/torchtext"
 OPENCV_GIT_DIR="$ENV_DIR/opencv"
 OPENCV_CONTRIB_GIT_DIR="$ENV_DIR/opencv_contrib"
 MAIN_TENSORRT_DIR="$CFG_ROOT_DIR/TensorRT"
@@ -224,7 +238,7 @@ TENSORRT_SAMPLES_COMPILED="$TENSORRT_INSTALL_DIR/samples/compiled"
 # Stage 2 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 2:
-rm -rf '$PYTORCH_GIT_DIR' '$TORCHVISION_GIT_DIR' '$OPENCV_GIT_DIR' '$OPENCV_CONTRIB_GIT_DIR'
+rm -rf '$PYTORCH_GIT_DIR' '$TORCHVISION_GIT_DIR' '$TORCHAUDIO_GIT_DIR' '$TORCHTEXT_GIT_DIR' '$OPENCV_GIT_DIR' '$OPENCV_CONTRIB_GIT_DIR'
 rmdir --ignore-fail-on-non-empty '$ENV_DIR' || true
 rmdir --ignore-fail-on-non-empty '$ENVS_DIR' || true
 EOM
@@ -277,9 +291,51 @@ if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 		(
 			set -x
 			cd "$ENV_DIR"
-			git clone https://github.com/pytorch/vision.git torchvision
+			git clone --recursive -j"$(nproc)" https://github.com/pytorch/vision.git torchvision
 			cd "$TORCHVISION_GIT_DIR"
 			git checkout "$CFG_TORCHVISION_TAG"
+			git checkout --recurse-submodules "$CFG_TORCHVISION_TAG"
+			git submodule sync
+			git submodule update --init --recursive
+			git submodule status
+		)
+	fi
+	echo
+fi
+
+# Clone the torchaudio repository
+if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
+	echo "Cloning Torchaudio $CFG_TORCHAUDIO_VERSION..."
+	if [[ ! -d "$TORCHAUDIO_GIT_DIR" ]]; then
+		(
+			set -x
+			cd "$ENV_DIR"
+			git clone --recursive -j"$(nproc)" https://github.com/pytorch/audio.git torchaudio
+			cd "$TORCHAUDIO_GIT_DIR"
+			git checkout "$CFG_TORCHAUDIO_TAG"
+			git checkout --recurse-submodules "$CFG_TORCHAUDIO_TAG"
+			git submodule sync
+			git submodule update --init --recursive
+			git submodule status
+		)
+	fi
+	echo
+fi
+
+# Clone the torchtext repository
+if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
+	echo "Cloning Torchtext $CFG_TORCHTEXT_VERSION..."
+	if [[ ! -d "$TORCHTEXT_GIT_DIR" ]]; then
+		(
+			set -x
+			cd "$ENV_DIR"
+			git clone --recursive -j"$(nproc)" https://github.com/pytorch/text.git torchtext
+			cd "$TORCHTEXT_GIT_DIR"
+			git checkout "$CFG_TORCHTEXT_TAG"
+			git checkout --recurse-submodules "$CFG_TORCHTEXT_TAG"
+			git submodule sync
+			git submodule update --init --recursive
+			git submodule status
 		)
 	fi
 	echo
@@ -573,6 +629,9 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
 	[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six setuptools onnx protobuf libprotobuf  # For TensorRT
 	conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pybind11 pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
+	[[ -n "$CFG_TORCHVISION_TAG" ]] && conda install $CFG_AUTO_YES typing_extensions numpy requests scipy  # For Torchvision
+	[[ -n "$CFG_TORCHAUDIO_TAG" ]] && conda install $CFG_AUTO_YES numpy scipy librosa kaldi_io  # For Torchaudio
+	[[ -n "$CFG_TORCHTEXT_TAG" ]] && conda install $CFG_AUTO_YES tqdm numpy requests nltk spacy sacremoses  # For Torchtext
 	conda install $CFG_AUTO_YES decorator appdirs mako numpy six platformdirs  # For pip packages
 	conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
 	CERES_EIGEN_VERSION="$(grep -oP '(?<=set\(CERES_EIGEN_VERSION)\s+[0-9.]+\s*(?=\))' "$CONDA_ENV_DIR/lib/cmake/Ceres/CeresConfig.cmake")"
