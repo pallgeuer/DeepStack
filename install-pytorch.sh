@@ -35,8 +35,8 @@ CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION:-/usr/local}"
 CFG_PYTORCH_VERSION="${CFG_PYTORCH_VERSION:-${CFG_PYTORCH_TAG#v}}"
 CFG_PYTORCH_NAME="${CFG_PYTORCH_NAME:-pytorch-$CFG_PYTORCH_VERSION}"
 
-# Torchvision git tag and version (see https://github.com/pytorch/vision#installation for compatibility, tag should be one of these: https://github.com/pytorch/vision/tags)
-# Example: CFG_TORCHVISION_TAG=v0.11.3
+# Optional torchvision git tag and version (see https://github.com/pytorch/vision#installation for compatibility, tag should be one of these: https://github.com/pytorch/vision/tags)
+CFG_TORCHVISION_TAG="${CFG_TORCHVISION_TAG:-}"  # Example: v0.11.3
 CFG_TORCHVISION_VERSION="${CFG_TORCHVISION_VERSION:-${CFG_TORCHVISION_TAG#v}}"
 
 # OpenCV git tag and version (tag should be one of these: https://github.com/opencv/opencv/tags)
@@ -271,17 +271,19 @@ fi
 echo
 
 # Clone the torchvision repository
-echo "Cloning Torchvision $CFG_TORCHVISION_VERSION..."
-if [[ ! -d "$TORCHVISION_GIT_DIR" ]]; then
-	(
-		set -x
-		cd "$ENV_DIR"
-		git clone https://github.com/pytorch/vision.git torchvision
-		cd "$TORCHVISION_GIT_DIR"
-		git checkout "$CFG_TORCHVISION_TAG"
-	)
+if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
+	echo "Cloning Torchvision $CFG_TORCHVISION_VERSION..."
+	if [[ ! -d "$TORCHVISION_GIT_DIR" ]]; then
+		(
+			set -x
+			cd "$ENV_DIR"
+			git clone https://github.com/pytorch/vision.git torchvision
+			cd "$TORCHVISION_GIT_DIR"
+			git checkout "$CFG_TORCHVISION_TAG"
+		)
+	fi
+	echo
 fi
-echo
 
 # Clone the OpenCV repositories
 echo "Cloning OpenCV $CFG_OPENCV_VERSION..."
@@ -815,56 +817,60 @@ echo
 TORCHVISION_BUILD_DIR="$TORCHVISION_GIT_DIR/build"
 
 # Stage 6 uninstall
-read -r -d '' UNINSTALLER_COMMANDS << EOM || true
+if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
+	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 6:
 set +ux
 conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchvision 2>/dev/null || true; cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$TORCHVISION_BUILD_DIR'
 EOM
-add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
-echo "$UNINSTALLER_COMMANDS"
-echo
+	add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+	echo "$UNINSTALLER_COMMANDS"
+	echo
+fi
 
 # Build Torchvision
-echo "Building Torchvision $CFG_TORCHVISION_VERSION..."
-if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchvision-*.egg" -exec false {} +; then
-	(
-		[[ ! -d "$TORCHVISION_BUILD_DIR" ]] && mkdir "$TORCHVISION_BUILD_DIR"
-		rm -rf "$TORCHVISION_BUILD_DIR"/*
-		cd "$TORCHVISION_GIT_DIR"
-		set +u
-		conda activate "$CFG_CONDA_ENV"
-		set -u
-		export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
-		export FORCE_CUDA=ON
-		RETRIED=
-		while ! time python setup.py build; do
-			echo
-			if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
-				response=
-				read -p "Try build again (y/N)? " response 2>&1
-				response="${response,,}"
-				[[ "$response" != "y" ]] && exit 1
+if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
+	echo "Building Torchvision $CFG_TORCHVISION_VERSION..."
+	if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchvision-*.egg" -exec false {} +; then
+		(
+			[[ ! -d "$TORCHVISION_BUILD_DIR" ]] && mkdir "$TORCHVISION_BUILD_DIR"
+			rm -rf "$TORCHVISION_BUILD_DIR"/*
+			cd "$TORCHVISION_GIT_DIR"
+			set +u
+			conda activate "$CFG_CONDA_ENV"
+			set -u
+			export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
+			export FORCE_CUDA=ON
+			RETRIED=
+			while ! time python setup.py build; do
 				echo
-			elif [[ -n "$RETRIED" ]]; then
-				exit 1
-			fi
-			RETRIED=true
-		done
-		echo
-		echo "Checking which external libraries the build products dynamically link to..."
-		find "$TORCHVISION_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHVISION_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
-		echo
-		echo "Installing Torchvision into conda environment..."
-		pip uninstall $CFG_AUTO_YES torchvision 2>/dev/null || true
-		python setup.py install
-		echo
-		echo "Removing build directory..."
-		rm -rf "$TORCHVISION_BUILD_DIR"
-	)
+				if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
+					response=
+					read -p "Try build again (y/N)? " response 2>&1
+					response="${response,,}"
+					[[ "$response" != "y" ]] && exit 1
+					echo
+				elif [[ -n "$RETRIED" ]]; then
+					exit 1
+				fi
+				RETRIED=true
+			done
+			echo
+			echo "Checking which external libraries the build products dynamically link to..."
+			find "$TORCHVISION_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHVISION_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
+			echo
+			echo "Installing Torchvision into conda environment..."
+			pip uninstall $CFG_AUTO_YES torchvision 2>/dev/null || true
+			python setup.py install
+			echo
+			echo "Removing build directory..."
+			rm -rf "$TORCHVISION_BUILD_DIR"
+		)
+	fi
+	echo
 fi
-echo
 
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 6 ]] && exit 0
