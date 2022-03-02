@@ -681,7 +681,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 		echo
 	fi
 	echo "Performing pip check..."
-	pip check
+	pip check || true
 	echo
 fi
 
