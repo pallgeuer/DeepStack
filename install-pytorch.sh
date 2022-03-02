@@ -22,6 +22,9 @@ CFG_QUICK="${CFG_QUICK:-}"
 # Whether to have faith and auto-answer all prompts
 CFG_AUTO_ANSWER="${CFG_AUTO_ANSWER:-0}"
 
+# Whether to allow/execute commands that require sudo
+CFG_ALLOW_SUDO="${CFG_ALLOW_SUDO:-1}"
+
 # Root directory to use for downloading and compiling libraries and storing files in the process of installation
 CFG_ROOT_DIR="${CFG_ROOT_DIR:-$SCRIPT_DIR}"
 
@@ -78,13 +81,14 @@ CFG_CONDA_CREATE="${CFG_CONDA_CREATE:-1}"  # Set this to anything other than "tr
 cd "$CFG_ROOT_DIR"
 
 # Clean up configuration variables
-[[ "$CFG_STAGE" -le 0 ]] 2>/dev/null && CFG_STAGE=0
+[[ "$CFG_STAGE" -lt -1 ]] 2>/dev/null && CFG_STAGE=0
 if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
 	CFG_AUTO_YES=
 else
 	CFG_AUTO_ANSWER="1"
 	CFG_AUTO_YES=-y
 fi
+[[ "$CFG_ALLOW_SUDO" != "1" ]] && CFG_ALLOW_SUDO="0"
 CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
 CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
@@ -97,6 +101,7 @@ echo
 echo "CFG_STAGE = $CFG_STAGE"
 echo "CFG_QUICK = $CFG_QUICK"
 echo "CFG_AUTO_ANSWER = $CFG_AUTO_ANSWER"
+echo "CFG_ALLOW_SUDO = $CFG_ALLOW_SUDO"
 echo "CFG_ROOT_DIR = $CFG_ROOT_DIR"
 echo "CFG_CUDA_VERSION = $CFG_CUDA_VERSION"
 echo "CFG_CUDA_NAME = $CFG_CUDA_NAME"
@@ -135,6 +140,24 @@ fi
 echo "Starting PyTorch installation..."
 echo
 
+# Install system dependencies
+echo "Installing various system dependencies..."
+if [[ "$CFG_ALLOW_SUDO" == "1" ]]; then
+	[[ -n "$CFG_TENSORRT_URL" ]] && [[ -z "$CFG_QUICK" ]] && sudo apt install $CFG_AUTO_YES python3-numpy python3-pillow
+	sudo apt install $CFG_AUTO_YES libnuma-dev
+	sudo apt install $CFG_AUTO_YES libva-dev libtbb-dev
+	sudo apt install $CFG_AUTO_YES v4l-utils libv4l-dev
+	sudo apt install $CFG_AUTO_YES openmpi-bin libopenmpi-dev
+	sudo apt install $CFG_AUTO_YES libglu1-mesa libglu1-mesa-dev freeglut3-dev libglfw3 libglfw3-dev libgl1-mesa-glx
+	sudo apt install $CFG_AUTO_YES qt5-default
+	sudo apt install $CFG_AUTO_YES fftw3 fftw3-dev
+	sudo apt install $CFG_AUTO_YES protobuf-compiler libprotobuf-dev
+fi
+echo
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq -1 ]] && exit 0
+
 # Initialise uninstaller script
 UNINSTALLERS_DIR="$CFG_ROOT_DIR/Uninstallers"
 UNINSTALLER_SCRIPT="$UNINSTALLERS_DIR/uninstall-$CFG_CONDA_ENV-pytorch.sh"
@@ -161,19 +184,6 @@ function add_uninstall_cmds()
 	UNINSTALLER_CONTENTS=$'\n'"$1"$'\n'"$UNINSTALLER_CONTENTS"
 	echo "$UNINSTALLER_HEADER"$'\n'"$UNINSTALLER_CONTENTS" > "$UNINSTALLER_SCRIPT"
 }
-echo
-
-# Install system dependencies
-echo "Installing various system dependencies..."
-[[ -n "$CFG_TENSORRT_URL" ]] && [[ -z "$CFG_QUICK" ]] && sudo apt install $CFG_AUTO_YES python3-numpy python3-pillow
-sudo apt install $CFG_AUTO_YES libnuma-dev
-sudo apt install $CFG_AUTO_YES libva-dev libtbb-dev
-sudo apt install $CFG_AUTO_YES v4l-utils libv4l-dev
-sudo apt install $CFG_AUTO_YES openmpi-bin libopenmpi-dev
-sudo apt install $CFG_AUTO_YES libglu1-mesa libglu1-mesa-dev freeglut3-dev libglfw3 libglfw3-dev libgl1-mesa-glx
-sudo apt install $CFG_AUTO_YES qt5-default
-sudo apt install $CFG_AUTO_YES fftw3 fftw3-dev
-sudo apt install $CFG_AUTO_YES protobuf-compiler libprotobuf-dev
 echo
 
 #
@@ -253,7 +263,7 @@ rmdir --ignore-fail-on-non-empty '$ENVS_DIR' || true
 EOM
 if [[ -n "$CFG_TENSORRT_URL" ]]; then
 	read -r -d '' EXTRA_UNINSTALLER_COMMANDS << EOM || true
-( cd '$TENSORRT_INSTALL_DIR/samples'; export CUDA_INSTALL_DIR='$CUDA_INSTALL_DIR'; export CUDNN_INSTALL_DIR="\$CUDA_INSTALL_DIR"; export TRT_LIB_DIR='$TENSORRT_INSTALL_DIR/lib'; export PROTOBUF_INSTALL_DIR=/usr/lib/x86_64-linux-gnu; make clean >/dev/null; )
+[[ -d '$TENSORRT_INSTALL_DIR/samples' ]] && ( cd '$TENSORRT_INSTALL_DIR/samples'; export CUDA_INSTALL_DIR='$CUDA_INSTALL_DIR'; export CUDNN_INSTALL_DIR="\$CUDA_INSTALL_DIR"; export TRT_LIB_DIR='$TENSORRT_INSTALL_DIR/lib'; export PROTOBUF_INSTALL_DIR=/usr/lib/x86_64-linux-gnu; make clean >/dev/null; )
 rm -rf '$TENSORRT_INSTALL_DIR/bintmp'
 rm -f '$TENSORRT_INSTALL_DIR/data/mnist/'{train,t10k}-{images,labels}-*
 rm -f '$TENSORRT_SAMPLES_COMPILED'
