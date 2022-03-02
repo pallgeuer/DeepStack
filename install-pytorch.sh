@@ -53,13 +53,22 @@ CFG_OPENCV_VERSION="${CFG_OPENCV_VERSION:-$CFG_OPENCV_TAG}"
 CFG_OPENCV_HEADLESS="${CFG_OPENCV_HEADLESS:-0}"
 CFG_OPENCV_CMAKE="${CFG_OPENCV_CMAKE:-}"  # Note: This is not expansion-safe
 
-# TensorRT version and URL to use, and whether to explicitly compile it into PyTorch (https://developer.nvidia.com/nvidia-tensorrt-download -> TensorRT X -> Agree to the terms -> TensorRT X.X.X for Linux x86_64/Ubuntu YY.YY and CUDA Z.Z TAR package -> Fix URL capitalisation if necessary)
+# TensorRT version and URL to use (https://developer.nvidia.com/nvidia-tensorrt-download -> TensorRT X -> Agree to the terms -> TensorRT X.X.X for Linux x86_64/Ubuntu YY.YY and CUDA Z.Z TAR package -> Fix URL capitalisation if necessary), branch or tag to use for onnx-tensorrt (https://github.com/onnx/onnx-tensorrt/branches/all or https://github.com/onnx/onnx-tensorrt/tags), and whether to explicitly compile TensorRT into PyTorch or just install it into the conda environment
 CFG_TENSORRT_VERSION="${CFG_TENSORRT_VERSION:-}"
 CFG_TENSORRT_URL="${CFG_TENSORRT_URL:-}"
+CFG_TENSORRT_ONNX_TAG="${CFG_TENSORRT_ONNX_TAG:-}"
 CFG_TENSORRT_PYTORCH="${CFG_TENSORRT_PYTORCH:-1}"
 
+# Generate default conda environment name
+CFG_TENSORRT_URL="${CFG_TENSORRT_URL%/}"
+DEFAULT_CFG_CONDA_ENV="$CFG_PYTORCH_NAME-$CFG_CUDA_NAME"
+if [[ -n "$CFG_TENSORRT_URL" ]]; then
+	[[ "$CFG_TENSORRT_PYTORCH" == "1" ]] && DEFAULT_CFG_CONDA_ENV+="-trt" || DEFAULT_CFG_CONDA_ENV+="-trtext"
+	DEFAULT_CFG_CONDA_ENV+="-$CFG_TENSORRT_VERSION"
+fi
+
 # Name to use for the created conda environment
-CFG_CONDA_ENV="${CFG_CONDA_ENV:-$CFG_PYTORCH_NAME-$CFG_CUDA_NAME}"
+CFG_CONDA_ENV="${CFG_CONDA_ENV:-$DEFAULT_CFG_CONDA_ENV}"
 CFG_CONDA_CREATE="${CFG_CONDA_CREATE:-1}"  # Set this to anything other than "true" to not attempt environment creation (environment must already exist and be appropriately configured)
 
 # Python version to use for the created conda environment (see https://github.com/pytorch/vision#installation for compatibility)
@@ -80,7 +89,6 @@ CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
 CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 [[ "$CFG_OPENCV_HEADLESS" != "0" ]] && CFG_OPENCV_HEADLESS="1"
-CFG_TENSORRT_URL="${CFG_TENSORRT_URL%/}"
 [[ "$CFG_TENSORRT_PYTORCH" != "1" ]] && CFG_TENSORRT_PYTORCH="0"
 [[ "$CFG_CONDA_CREATE" != "1" ]] && CFG_CONDA_CREATE="0"
 
@@ -108,6 +116,7 @@ echo "CFG_OPENCV_HEADLESS = $CFG_OPENCV_HEADLESS"
 echo "CFG_OPENCV_CMAKE = $CFG_OPENCV_CMAKE"
 echo "CFG_TENSORRT_VERSION = $CFG_TENSORRT_VERSION"
 echo "CFG_TENSORRT_URL = $CFG_TENSORRT_URL"
+echo "CFG_TENSORRT_ONNX_TAG = $CFG_TENSORRT_ONNX_TAG"
 echo "CFG_TENSORRT_PYTORCH = $CFG_TENSORRT_PYTORCH"
 echo "CFG_CONDA_CREATE = $CFG_CONDA_CREATE"
 echo "CFG_CONDA_ENV = $CFG_CONDA_ENV"
@@ -233,7 +242,7 @@ OPENCV_CONTRIB_GIT_DIR="$ENV_DIR/opencv_contrib"
 MAIN_TENSORRT_DIR="$CFG_ROOT_DIR/TensorRT"
 TENSORRT_INSTALL_DIR="$MAIN_TENSORRT_DIR/$TENSORRT_DIRNAME"
 TENSORRT_ENVS_LIST="$TENSORRT_INSTALL_DIR/envs.list"
-TENSORRT_SAMPLES_COMPILED="$TENSORRT_INSTALL_DIR/samples/compiled"
+TENSORRT_SAMPLES_COMPILED="$TENSORRT_INSTALL_DIR/samples/compiled-$CFG_CUDA_NAME"
 
 # Stage 2 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
@@ -277,8 +286,19 @@ if [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
 		git submodule status
 		[[ -f "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc" ]] && sed -i 's/TORCH_WARN("Leaking Caffe2 thread-pool after fork.");/;/g' "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc"
 		if [[ -n "$CFG_TENSORRT_URL" ]]; then
+			if [[ -n "$CFG_TENSORRT_ONNX_TAG" ]]; then
+				(
+					cd "$PYTORCH_GIT_DIR/third_party/onnx-tensorrt"
+					git checkout "$CFG_TENSORRT_ONNX_TAG"
+					git checkout --recurse-submodules "$CFG_TENSORRT_ONNX_TAG"
+					git submodule sync
+					git submodule update --init --recursive
+					git submodule status
+				)
+			fi
 			[[ -f "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py" ]] && sed -i "s/'BUILD_', 'USE_', 'CMAKE_'/&, 'TENSORRT_'/" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
 			[[ -f "$PYTORCH_GIT_DIR/caffe2/contrib/tensorrt/tensorrt_tranformer.cc" ]] && sed -i "s/^\s*auto cutResult = opt::OptimizeForBackend(\*pred_net, supports, trt_converter)$/&;/" "$PYTORCH_GIT_DIR/caffe2/contrib/tensorrt/tensorrt_tranformer.cc"
+			[[ -f "$PYTORCH_GIT_DIR/third_party/onnx-tensorrt/builtin_op_importers.cpp" ]] && sed -i "s/constexpr auto getMatrixOp = \[\]/auto getMatrixOp = []/g" "$PYTORCH_GIT_DIR/third_party/onnx-tensorrt/builtin_op_importers.cpp"
 		fi
 	)
 fi

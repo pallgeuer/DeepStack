@@ -32,6 +32,8 @@ component versions:
  * **TensorRT:** 6.0.1 to 8.2.3
  * **PyTorch:** 1.8.2 to 1.10.2
  * **Torchvision:** 0.9.2 to 0.11.3
+ * **Torchaudio:** 0.8.2 to 0.10.2
+ * **Torchtext:** 0.9.2 to 0.11.2
 
 ## Prerequisites
 
@@ -211,12 +213,15 @@ Python into a conda environment. Note that this does not install development
 files into the conda environment, so you cannot easily compile further libraries
 against this install of OpenCV.
 
- * `install-pytorch.sh`: Compiles and installs development versions of PyTorch,
-Torchvision, OpenCV and TensorRT (optional) into a conda environment.
+ * `install-pytorch.sh`: Compiles and installs development versions of PyTorch, 
+OpenCV, and optionally Torchvision, Torchaudio, Torchtext and TensorRT, into a 
+conda environment.
 
-Each of these scripts have many required (and optional) configuration
-parameters, which are clearly documented in the Configuration section of the
-corresponding script source code.
+Each of these scripts have many required (and optional) configuration 
+parameters, which are clearly documented in the Configuration section of the 
+corresponding script source code. Note that you should *not* run multiple 
+instances of the same script in parallel, as this could result in race 
+conditions and errors.
 
 For instance, you can install CUDA 11.5 with cuDNN 8.3.2 using the one-liner:
 ```
@@ -249,20 +254,21 @@ CFG_CONDA_ENV=pytch ./install-pytorch-1.10.2-cuda-11.3.sh
 And this installs PyTorch 1.8.2 LTS along with TensorRT 6.0.1 into the new conda
 environment `trt` based on an existing installation of CUDA 10.1:
 ```
-CFG_CONDA_ENV=trt ./install-pytorch-1.8.2-cuda-10.1-trt.sh
+CFG_CONDA_ENV=trt ./install-pytorch-1.8.2-cuda-10.1-trt-6.0.1.sh
 ```
 The following installs PyTorch 1.10.2 along with TensorRT 8.2.3 into the new
 conda environment `myproj` based on an existing installation of CUDA 11.3, but
 does not explicitly compile TensorRT into PyTorch:
 ```
-CFG_CONDA_ENV=myproj ./install-pytorch-1.10.2-cuda-11.3-trtext.sh
+CFG_CONDA_ENV=myproj ./install-pytorch-1.10.2-cuda-11.3-trtext-8.2.3.sh
 ```
 This may be useful in order to side-step compatibility issues, and does not
-prevent you from exporting PyTorch models to TensorRT via ONNX as normal. For
-instance, PyTorch 1.10 is not directly compatible with TensorRT 8 and above (due
-to removal of deprecated APIs), and TensorRT 7 does not support Python 3.9+.
-TensorRT 7 also only officially supports cuDNN 8.1.1, which may not match up
-well to the desired CUDA version.
+prevent you from exporting PyTorch models to TensorRT via ONNX as normal. For 
+instance, PyTorch 1.10 is not directly compatible with TensorRT 8 and above (due 
+to removal of deprecated APIs), and TensorRT 7 does not support Python 3.9+ or 
+CUDA 11.2+ (even though at first from the website it seems CUDA 11.2 is 
+supported). TensorRT 7 also only officially supports up to cuDNN 8.1.1, which 
+may not match up well to the desired CUDA version.
 
 In most of the above commands, two other commonly useful configuration variables
 aside from `CFG_CONDA_ENV` are `CFG_AUTO_ANSWER=1` (automatically answer yes to
@@ -303,8 +309,6 @@ already completed stages and keeps going where it left off.
 
 In the future it would be great to also include support for the following
 library components:
- * **Torchaudio:** 0.8.2 onwards
- * **Torchtext:** 0.9.2 onwards
  * **TensorFlow:** 2.4.0 onwards
  * **TensorBoard:** 2.4.0 onwards
 
