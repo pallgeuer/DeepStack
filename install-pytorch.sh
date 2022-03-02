@@ -629,8 +629,8 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
 	[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six setuptools onnx protobuf libprotobuf  # For TensorRT
 	conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pybind11 pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
-	[[ -n "$CFG_TORCHVISION_TAG" ]] && conda install $CFG_AUTO_YES typing_extensions numpy requests scipy  # For Torchvision
-	[[ -n "$CFG_TORCHAUDIO_TAG" ]] && conda install $CFG_AUTO_YES numpy scipy librosa kaldi_io  # For Torchaudio
+	[[ -n "$CFG_TORCHVISION_TAG" ]] && conda install $CFG_AUTO_YES typing_extensions numpy requests scipy scikit-learn-intelex  # For Torchvision
+	[[ -n "$CFG_TORCHAUDIO_TAG" ]] && conda install $CFG_AUTO_YES numpy scipy scikit-learn-intelex librosa kaldi_io  # For Torchaudio
 	[[ -n "$CFG_TORCHTEXT_TAG" ]] && conda install $CFG_AUTO_YES tqdm numpy requests nltk spacy sacremoses  # For Torchtext
 	conda install $CFG_AUTO_YES decorator appdirs mako numpy six platformdirs  # For pip packages
 	conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
@@ -933,6 +933,137 @@ fi
 
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 6 ]] && exit 0
+
+#
+# Stage 7
+#
+
+# Variables
+TORCHAUDIO_BUILD_DIR="$TORCHAUDIO_GIT_DIR/build"
+
+# Stage 7 uninstall
+if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
+	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
+Commands to undo stage 7:
+set +ux
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchaudio 2>/dev/null || true; cd '$TORCHAUDIO_GIT_DIR' && python setup.py clean || true; )
+set -ux
+rm -rf '$TORCHAUDIO_BUILD_DIR'
+EOM
+	add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+	echo "$UNINSTALLER_COMMANDS"
+	echo
+fi
+
+# Build Torchaudio
+if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
+	echo "Building Torchaudio $CFG_TORCHAUDIO_VERSION..."
+	if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchaudio-*.egg" -exec false {} +; then
+		(
+			[[ ! -d "$TORCHAUDIO_BUILD_DIR" ]] && mkdir "$TORCHAUDIO_BUILD_DIR"
+			rm -rf "$TORCHAUDIO_BUILD_DIR"/*
+			cd "$TORCHAUDIO_GIT_DIR"
+			set +u
+			conda activate "$CFG_CONDA_ENV"
+			set -u
+			export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
+			export USE_CUDA=ON
+			RETRIED=
+			while ! time python setup.py build; do
+				echo
+				if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
+					response=
+					read -p "Try build again (y/N)? " response 2>&1
+					response="${response,,}"
+					[[ "$response" != "y" ]] && exit 1
+					echo
+				elif [[ -n "$RETRIED" ]]; then
+					exit 1
+				fi
+				RETRIED=true
+			done
+			echo
+			echo "Checking which external libraries the build products dynamically link to..."
+			find "$TORCHAUDIO_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHAUDIO_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
+			echo
+			echo "Installing Torchaudio into conda environment..."
+			pip uninstall $CFG_AUTO_YES torchaudio 2>/dev/null || true
+			python setup.py install
+			echo
+			echo "Removing build directory..."
+			rm -rf "$TORCHAUDIO_BUILD_DIR"
+		)
+	fi
+	echo
+fi
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq 7 ]] && exit 0
+
+#
+# Stage 8
+#
+
+# Variables
+TORCHTEXT_BUILD_DIR="$TORCHTEXT_GIT_DIR/build"
+
+# Stage 8 uninstall
+if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
+	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
+Commands to undo stage 8:
+set +ux
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchtext 2>/dev/null || true; cd '$TORCHTEXT_GIT_DIR' && python setup.py clean || true; )
+set -ux
+rm -rf '$TORCHTEXT_BUILD_DIR'
+EOM
+	add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+	echo "$UNINSTALLER_COMMANDS"
+	echo
+fi
+
+# Build Torchtext
+if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
+	echo "Building Torchtext $CFG_TORCHTEXT_VERSION..."
+	if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchtext-*.egg" -exec false {} +; then
+		(
+			[[ ! -d "$TORCHTEXT_BUILD_DIR" ]] && mkdir "$TORCHTEXT_BUILD_DIR"
+			rm -rf "$TORCHTEXT_BUILD_DIR"/*
+			cd "$TORCHTEXT_GIT_DIR"
+			set +u
+			conda activate "$CFG_CONDA_ENV"
+			set -u
+			export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
+			RETRIED=
+			while ! time python setup.py build; do
+				echo
+				if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
+					response=
+					read -p "Try build again (y/N)? " response 2>&1
+					response="${response,,}"
+					[[ "$response" != "y" ]] && exit 1
+					echo
+				elif [[ -n "$RETRIED" ]]; then
+					exit 1
+				fi
+				RETRIED=true
+			done
+			echo
+			echo "Checking which external libraries the build products dynamically link to..."
+			find "$TORCHTEXT_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHTEXT_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
+			echo
+			echo "Installing Torchtext into conda environment..."
+			pip uninstall $CFG_AUTO_YES torchtext 2>/dev/null || true
+			python setup.py install
+			echo
+			echo "Removing build directory..."
+			rm -rf "$TORCHTEXT_BUILD_DIR"
+		)
+	fi
+	echo
+fi
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq 8 ]] && exit 0
 
 #
 # Finish
