@@ -322,4 +322,6 @@ you think the installation scripts are at fault, i.e. not just a compilation
 error due to library compatibility issues. If you have any specific realisable
 feature suggestions, then that would be welcome too. If you're looking for a
 template to build PyTorch in a docker environment, then
+[PyTorch Docker Hub](https://hub.docker.com/r/pytorch/pytorch) or
+[NVIDIA NGC](https://catalog.ngc.nvidia.com) or
 [Cresset](https://github.com/cresset-template/cresset) may be for you.
