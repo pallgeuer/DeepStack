@@ -807,7 +807,7 @@ PYTORCH_BUILD_DIR="$PYTORCH_GIT_DIR/build"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 5:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torch 2>/dev/null || true; cd '$PYTORCH_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torch 2>/dev/null || true; [[ -d '$PYTORCH_GIT_DIR' ]] && cd '$PYTORCH_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$PYTORCH_BUILD_DIR' '$PYTORCH_GIT_DIR/torch.egg-info'
 EOM
@@ -912,7 +912,7 @@ if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 6:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchvision 2>/dev/null || true; cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchvision 2>/dev/null || true; [[ -d '$TORCHVISION_GIT_DIR' ]] && cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$TORCHVISION_BUILD_DIR'
 EOM
@@ -978,7 +978,7 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 7:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchaudio 2>/dev/null || true; cd '$TORCHAUDIO_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchaudio 2>/dev/null || true; [[ -d '$TORCHAUDIO_GIT_DIR' ]] && cd '$TORCHAUDIO_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$TORCHAUDIO_BUILD_DIR'
 EOM
@@ -1044,7 +1044,7 @@ if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 8:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchtext 2>/dev/null || true; cd '$TORCHTEXT_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchtext 2>/dev/null || true; [[ -d '$TORCHTEXT_GIT_DIR' ]] && cd '$TORCHTEXT_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$TORCHTEXT_BUILD_DIR'
 EOM
