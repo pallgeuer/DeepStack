@@ -349,7 +349,7 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 			git submodule sync
 			git submodule update --init --recursive
 			git submodule status
-			[[ -f "$TORCHAUDIO_GIT_DIR/third_party/kaldi/CMakeLists.txt" ]] && sed -i 's/COMMAND sh get_version\.sh/COMMAND ./get_version.sh/g' "$TORCHAUDIO_GIT_DIR/third_party/kaldi/CMakeLists.txt"
+			[[ -f "$TORCHAUDIO_GIT_DIR/third_party/kaldi/CMakeLists.txt" ]] && sed -i 's|COMMAND sh get_version\.sh|COMMAND ./get_version.sh|g' "$TORCHAUDIO_GIT_DIR/third_party/kaldi/CMakeLists.txt"
 		)
 	fi
 	echo
