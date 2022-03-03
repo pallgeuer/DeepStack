@@ -16,10 +16,10 @@ naive install.
 
 ## Tested configurations
 
-This repository can be used to install arbitrary version combinations of all the
-component libraries involved, but some configurations will obviously work better
-than others due to library dependencies and cross-compatibilities. This
-repository has so far been tested on selected combinations of the following
+This repository can be used to install *arbitrary version combinations* of all 
+the component libraries involved, but some configurations will obviously work 
+better than others due to library dependencies and cross-compatibilities. This 
+repository has so far been *tested* on selected combinations of the following 
 component versions:
 
  * **Ubuntu:** 18.04, 20.04 (x86_64)
@@ -34,6 +34,9 @@ component versions:
  * **Torchvision:** 0.9.2 to 0.11.3
  * **Torchaudio:** 0.8.2 to 0.10.2
  * **Torchtext:** 0.9.2 to 0.11.2
+
+As stated however, PyTorch versions prior to 1.8.2 LTS can *likely* be built 
+with this repository, it just hasn't been tested yet.
 
 ## Prerequisites
 
