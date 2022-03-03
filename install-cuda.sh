@@ -317,8 +317,7 @@ export CUDA_PATH="#CUDA_INSTALL_DIR#"
 
 # Add the required CUDA directories to the environment paths
 __PrependPath PATH "$CUDA_PATH/bin"
-__PrependPath LD_LIBRARY_PATH "$CUDA_PATH/lib64" "$CUDA_PATH/extras/CUPTI/lib64"
-#SET_GCC_COMPILER#
+__PrependPath LD_LIBRARY_PATH "$CUDA_PATH/lib64" "$CUDA_PATH/extras/CUPTI/lib64"#SET_GCC_COMPILER#
 
 # Unset the function we have created
 unset -f __PrependPath
@@ -359,7 +358,7 @@ __RemovePath PATH "$OUR_CUDA_PATH/bin"
 __RemovePath LD_LIBRARY_PATH "$OUR_CUDA_PATH/lib64" "$OUR_CUDA_PATH/extras/CUPTI/lib64"
 
 # Unset any default GCC compiler
-[[ "$CUDA_PATH" == "$OUR_CUDA_PATH" ]] && unset CC CXX
+[[ "$CUDA_PATH" == "$OUR_CUDA_PATH" ]] && unset CC CXX CUDAHOSTCXX
 
 # Unset the function we have created
 unset -f __RemovePath
@@ -369,8 +368,10 @@ set -e
 CUDA_ADD_PATH_CONTENTS="${CUDA_ADD_PATH_CONTENTS//#CUDA_INSTALL_DIR#/$CUDA_INSTALL_DIR}"
 CUDA_ADD_PATH_CONTENTS="${CUDA_ADD_PATH_CONTENTS//#CFG_CUDA_NAME#/$CFG_CUDA_NAME}"
 if [[ -n "$GCC_PATH" ]] || [[ -n "$GXX_PATH" ]]; then
-	SET_GCC_COMPILER=$'\n# Set the default GCC compiler\n'"export CC=\"$GCC_PATH\" CXX=\"$GXX_PATH\""
+	SET_GCC_COMPILER=$'\n\n# Set the default GCC compiler\n'"export CC=\"$GCC_PATH\" CXX=\"$GXX_PATH\" CUDAHOSTCXX=\"$GXX_PATH\""
 	CUDA_ADD_PATH_CONTENTS="${CUDA_ADD_PATH_CONTENTS//#SET_GCC_COMPILER#/$SET_GCC_COMPILER}"
+else
+	CUDA_ADD_PATH_CONTENTS="${CUDA_ADD_PATH_CONTENTS//#SET_GCC_COMPILER#/}"
 fi
 CUDA_REMOVE_PATH_CONTENTS="${CUDA_REMOVE_PATH_CONTENTS//#CUDA_INSTALL_DIR#/$CUDA_INSTALL_DIR}"
 CUDA_ADD_PATH="$CUDA_INSTALL_DIR/add_path.sh"
