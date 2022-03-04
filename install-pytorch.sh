@@ -349,6 +349,7 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 			git submodule sync
 			git submodule update --init --recursive
 			git submodule status
+			[[ -n "$CFG_TENSORRT_URL" ]] && [[ -f "$TORCHAUDIO_GIT_DIR/build_tools/setup_helpers/extension.py" ]] && sed -i 's|cmake_args = \[|&f"-DTENSORRT_ROOT={os.getenv('"'"'TENSORRT_ROOT'"'"')}", |' "$TORCHAUDIO_GIT_DIR/build_tools/setup_helpers/extension.py"
 			[[ -f "$TORCHAUDIO_GIT_DIR/third_party/kaldi/CMakeLists.txt" ]] && sed -i 's|COMMAND sh get_version\.sh|COMMAND ./get_version.sh|g' "$TORCHAUDIO_GIT_DIR/third_party/kaldi/CMakeLists.txt"
 		)
 	fi
@@ -998,6 +999,10 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 			cd "$TORCHAUDIO_GIT_DIR"
 			set +u
 			conda activate "$CFG_CONDA_ENV"
+			if [[ -n "$CFG_TENSORRT_URL" ]]; then
+				source "$TENSORRT_INSTALL_DIR/add_path.sh"
+				export TENSORRT_ROOT="$TENSORRT_INSTALL_DIR"
+			fi
 			set -u
 			export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
 			export USE_CUDA=ON
