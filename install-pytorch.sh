@@ -580,7 +580,7 @@ fi
 # Stage 3 uninstall
 UNINSTALLER_COMMANDS="Commands to undo stage 3:"$'\n'"set +ux"
 [[ "$CFG_CONDA_CREATE" == "1" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda deactivate"$'\n'"conda env remove -n '$CFG_CONDA_ENV'"
-UNINSTALLER_COMMANDS+=$'\n'"conda clean --all"$'\n'"set -ux"
+UNINSTALLER_COMMANDS+=$'\n'"conda clean -y --all"$'\n'"set -ux"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
@@ -725,7 +725,7 @@ OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 4:
 set +ux
-conda activate '$CFG_CONDA_ENV' && pip uninstall \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
+conda activate '$CFG_CONDA_ENV' && pip uninstall -y \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
 set -ux
 if [[ -d '$OPENCV_BUILD_DIR' ]]; then ( cd '$OPENCV_BUILD_DIR'; make uninstall || true; make clean || true; ) elif [[ -f '$OPENCV_GIT_DIR/install_manifest.txt' ]]; then echo 'You will need to check the install manifest and uninstall manually: $OPENCV_GIT_DIR/install_manifest.txt'; fi
 rm -rf '$OPENCV_BUILD_DIR' '$OPENCV_GIT_DIR/.cache' '$OPENCV_PYTHON_STUB_DIR'
@@ -814,7 +814,7 @@ PYTORCH_BUILD_DIR="$PYTORCH_GIT_DIR/build"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 5:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torch || true; [[ -d '$PYTORCH_GIT_DIR' ]] && cd '$PYTORCH_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall -y torch || true; [[ -d '$PYTORCH_GIT_DIR' ]] && cd '$PYTORCH_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$PYTORCH_BUILD_DIR' '$PYTORCH_GIT_DIR/torch.egg-info'
 EOM
@@ -922,7 +922,7 @@ if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 6:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchvision || true; [[ -d '$TORCHVISION_GIT_DIR' ]] && cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall -y torchvision || true; [[ -d '$TORCHVISION_GIT_DIR' ]] && cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$TORCHVISION_BUILD_DIR'
 EOM
@@ -990,7 +990,7 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 7:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchaudio || true; [[ -d '$TORCHAUDIO_GIT_DIR' ]] && cd '$TORCHAUDIO_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall -y torchaudio || true; [[ -d '$TORCHAUDIO_GIT_DIR' ]] && cd '$TORCHAUDIO_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$TORCHAUDIO_BUILD_DIR'
 EOM
@@ -1062,7 +1062,7 @@ if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 8:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchtext || true; [[ -d '$TORCHTEXT_GIT_DIR' ]] && cd '$TORCHTEXT_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall -y torchtext || true; [[ -d '$TORCHTEXT_GIT_DIR' ]] && cd '$TORCHTEXT_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$TORCHTEXT_BUILD_DIR'
 EOM

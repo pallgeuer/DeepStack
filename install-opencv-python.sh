@@ -180,7 +180,7 @@ echo
 # Stage 2 uninstall
 UNINSTALLER_COMMANDS="Commands to undo stage 2:"$'\n'"set +ux"
 [[ "$CFG_CONDA_CREATE" == "1" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda deactivate"$'\n'"conda env remove -n '$CFG_CONDA_ENV'"
-UNINSTALLER_COMMANDS+=$'\n'"conda clean --all"$'\n'"set -ux"
+UNINSTALLER_COMMANDS+=$'\n'"conda clean -y --all"$'\n'"set -ux"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
@@ -297,7 +297,7 @@ OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
 set +ux
-conda activate '$CFG_CONDA_ENV' && pip uninstall \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
+conda activate '$CFG_CONDA_ENV' && pip uninstall -y \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
 set -ux
 rm -rf '$OPENCV_PYTHON_STUB_DIR' '$OPENCV_PYTHON_GIT_DIR'/*.whl
 EOM
