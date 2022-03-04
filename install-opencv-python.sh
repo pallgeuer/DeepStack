@@ -337,7 +337,9 @@ OPENCV_PACKAGE="$(basename "$OPENCV_WHEEL")"
 OPENCV_PACKAGE="${OPENCV_PACKAGE%%-*}"
 OPENCV_PACKAGE="${OPENCV_PACKAGE//_/-}"
 if ! pip show "$OPENCV_PACKAGE" &>/dev/null; then
+	echo "Uninstalling any existing OpenCV from conda environment..."
 	pip uninstall $CFG_AUTO_YES $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
+	echo "Installing built OpenCV python wheel..."
 	pip install "$OPENCV_WHEEL"
 fi
 echo

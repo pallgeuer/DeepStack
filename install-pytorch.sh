@@ -752,8 +752,10 @@ if [[ ! -f "$CONDA_PREFIX/bin/opencv_version" ]]; then
 		echo "Checking which external libraries the build products dynamically link to..."
 		find "$OPENCV_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$OPENCV_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 		echo
-		echo "Installing OpenCV into conda environment..."
+		echo "Uninstalling any existing OpenCV from conda environment..."
 		pip uninstall $CFG_AUTO_YES $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
+		echo
+		echo "Installing OpenCV into conda environment..."
 		make install
 		cp "$OPENCV_BUILD_DIR/install_manifest.txt" "$OPENCV_GIT_DIR/install_manifest.txt"
 		echo
@@ -861,8 +863,10 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -
 		echo "Checking which external libraries the build products dynamically link to..."
 		find "$PYTORCH_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$PYTORCH_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 		echo
-		echo "Installing PyTorch into conda environment..."
+		echo "Uninstalling any existing PyTorch from conda environment..."
 		pip uninstall $CFG_AUTO_YES torch || true
+		echo
+		echo "Installing PyTorch into conda environment..."
 		python setup.py install
 		echo
 		echo "Checking PyTorch is available in python..."
@@ -958,8 +962,10 @@ if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 			echo "Checking which external libraries the build products dynamically link to..."
 			find "$TORCHVISION_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHVISION_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 			echo
-			echo "Installing Torchvision into conda environment..."
+			echo "Uninstalling any existing Torchvision from conda environment..."
 			pip uninstall $CFG_AUTO_YES torchvision || true
+			echo
+			echo "Installing Torchvision into conda environment..."
 			python setup.py install
 			echo
 			echo "Removing build directory..."
@@ -1028,8 +1034,10 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 			echo "Checking which external libraries the build products dynamically link to..."
 			find "$TORCHAUDIO_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHAUDIO_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 			echo
-			echo "Installing Torchaudio into conda environment..."
+			echo "Uninstalling any existing Torchaudio from conda environment..."
 			pip uninstall $CFG_AUTO_YES torchaudio || true
+			echo
+			echo "Installing Torchaudio into conda environment..."
 			python setup.py install
 			echo
 			echo "Removing build directory..."
@@ -1093,8 +1101,10 @@ if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
 			echo "Checking which external libraries the build products dynamically link to..."
 			find "$TORCHTEXT_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHTEXT_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 			echo
-			echo "Installing Torchtext into conda environment..."
+			echo "Uninstalling any existing Torchtext from conda environment..."
 			pip uninstall $CFG_AUTO_YES torchtext || true
+			echo
+			echo "Installing Torchtext into conda environment..."
 			python setup.py install
 			echo
 			echo "Removing build directory..."
