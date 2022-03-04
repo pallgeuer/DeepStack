@@ -308,7 +308,10 @@ if [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
 					git submodule status
 				)
 			fi
-			[[ -f "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py" ]] && sed -i "s/'BUILD_', 'USE_', 'CMAKE_'/&, 'TENSORRT_'/" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
+			if [[ -f "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py" ]]; then
+				sed -i "s/'BUILD_', 'USE_', 'CMAKE_'/&, 'TENSORRT_'/" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
+				sed -i "s|additional_options = {|&'pybind11_PREFER_third_party': 'pybind11_PREFER_third_party',|" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
+			fi
 			[[ -f "$PYTORCH_GIT_DIR/caffe2/contrib/tensorrt/tensorrt_tranformer.cc" ]] && sed -i "s/^\s*auto cutResult = opt::OptimizeForBackend(\*pred_net, supports, trt_converter)$/&;/" "$PYTORCH_GIT_DIR/caffe2/contrib/tensorrt/tensorrt_tranformer.cc"
 			[[ -f "$PYTORCH_GIT_DIR/third_party/onnx-tensorrt/builtin_op_importers.cpp" ]] && sed -i "s/constexpr auto getMatrixOp = \[\]/auto getMatrixOp = []/g" "$PYTORCH_GIT_DIR/third_party/onnx-tensorrt/builtin_op_importers.cpp"
 		fi
@@ -830,6 +833,7 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -
 		export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
 		export BUILD_BINARY=ON BUILD_TEST=OFF BUILD_DOCS=OFF BUILD_SHARED_LIBS=ON BUILD_CUSTOM_PROTOBUF=ON
 		export USE_CUDNN=ON USE_FFMPEG=ON USE_GFLAGS=OFF USE_GLOG=OFF USE_OPENCV=ON
+		export USE_SYSTEM_BIND11=OFF pybind11_PREFER_third_party=ON
 		if [[ -n "$CFG_TENSORRT_URL" ]] && [[ "$CFG_TENSORRT_PYTORCH" == 1 ]]; then
 			export USE_TENSORRT=ON
 			export TENSORRT_ROOT="$TENSORRT_INSTALL_DIR"
