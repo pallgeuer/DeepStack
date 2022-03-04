@@ -1009,7 +1009,7 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 			fi
 			set -u
 			export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
-			export USE_CUDA=ON
+			export USE_CUDA=ON BUILD_SOX=ON
 			RETRIED=
 			while ! time python setup.py build; do
 				echo
