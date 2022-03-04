@@ -297,7 +297,7 @@ OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
 set +ux
-conda activate '$CFG_CONDA_ENV' && pip uninstall \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
+conda activate '$CFG_CONDA_ENV' && pip uninstall \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
 set -ux
 rm -rf '$OPENCV_PYTHON_STUB_DIR' '$OPENCV_PYTHON_GIT_DIR'/*.whl
 EOM
@@ -337,7 +337,7 @@ OPENCV_PACKAGE="$(basename "$OPENCV_WHEEL")"
 OPENCV_PACKAGE="${OPENCV_PACKAGE%%-*}"
 OPENCV_PACKAGE="${OPENCV_PACKAGE//_/-}"
 if ! pip show "$OPENCV_PACKAGE" &>/dev/null; then
-	pip uninstall $CFG_AUTO_YES $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
+	pip uninstall $CFG_AUTO_YES $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
 	pip install "$OPENCV_WHEEL"
 fi
 echo

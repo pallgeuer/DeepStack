@@ -725,7 +725,7 @@ OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 4:
 set +ux
-conda activate '$CFG_CONDA_ENV' && pip uninstall \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
+conda activate '$CFG_CONDA_ENV' && pip uninstall \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
 set -ux
 if [[ -d '$OPENCV_BUILD_DIR' ]]; then ( cd '$OPENCV_BUILD_DIR'; make uninstall || true; make clean || true; ) elif [[ -f '$OPENCV_GIT_DIR/install_manifest.txt' ]]; then echo 'You will need to check the install manifest and uninstall manually: $OPENCV_GIT_DIR/install_manifest.txt'; fi
 rm -rf '$OPENCV_BUILD_DIR' '$OPENCV_GIT_DIR/.cache' '$OPENCV_PYTHON_STUB_DIR'
@@ -753,7 +753,7 @@ if [[ ! -f "$CONDA_PREFIX/bin/opencv_version" ]]; then
 		find "$OPENCV_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$OPENCV_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 		echo
 		echo "Installing OpenCV into conda environment..."
-		pip uninstall $CFG_AUTO_YES $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') 2>/dev/null || true
+		pip uninstall $CFG_AUTO_YES $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
 		make install
 		cp "$OPENCV_BUILD_DIR/install_manifest.txt" "$OPENCV_GIT_DIR/install_manifest.txt"
 		echo
@@ -812,7 +812,7 @@ PYTORCH_BUILD_DIR="$PYTORCH_GIT_DIR/build"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 5:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torch 2>/dev/null || true; [[ -d '$PYTORCH_GIT_DIR' ]] && cd '$PYTORCH_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torch || true; [[ -d '$PYTORCH_GIT_DIR' ]] && cd '$PYTORCH_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$PYTORCH_BUILD_DIR' '$PYTORCH_GIT_DIR/torch.egg-info'
 EOM
@@ -862,7 +862,7 @@ if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -
 		find "$PYTORCH_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$PYTORCH_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 		echo
 		echo "Installing PyTorch into conda environment..."
-		pip uninstall $CFG_AUTO_YES torch 2>/dev/null || true
+		pip uninstall $CFG_AUTO_YES torch || true
 		python setup.py install
 		echo
 		echo "Checking PyTorch is available in python..."
@@ -918,7 +918,7 @@ if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 6:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchvision 2>/dev/null || true; [[ -d '$TORCHVISION_GIT_DIR' ]] && cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchvision || true; [[ -d '$TORCHVISION_GIT_DIR' ]] && cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$TORCHVISION_BUILD_DIR'
 EOM
@@ -959,7 +959,7 @@ if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 			find "$TORCHVISION_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHVISION_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 			echo
 			echo "Installing Torchvision into conda environment..."
-			pip uninstall $CFG_AUTO_YES torchvision 2>/dev/null || true
+			pip uninstall $CFG_AUTO_YES torchvision || true
 			python setup.py install
 			echo
 			echo "Removing build directory..."
@@ -984,7 +984,7 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 7:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchaudio 2>/dev/null || true; [[ -d '$TORCHAUDIO_GIT_DIR' ]] && cd '$TORCHAUDIO_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchaudio || true; [[ -d '$TORCHAUDIO_GIT_DIR' ]] && cd '$TORCHAUDIO_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$TORCHAUDIO_BUILD_DIR'
 EOM
@@ -1029,7 +1029,7 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 			find "$TORCHAUDIO_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHAUDIO_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 			echo
 			echo "Installing Torchaudio into conda environment..."
-			pip uninstall $CFG_AUTO_YES torchaudio 2>/dev/null || true
+			pip uninstall $CFG_AUTO_YES torchaudio || true
 			python setup.py install
 			echo
 			echo "Removing build directory..."
@@ -1054,7 +1054,7 @@ if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 8:
 set +ux
-conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchtext 2>/dev/null || true; [[ -d '$TORCHTEXT_GIT_DIR' ]] && cd '$TORCHTEXT_GIT_DIR' && python setup.py clean || true; )
+conda activate '$CFG_CONDA_ENV' && ( pip uninstall torchtext || true; [[ -d '$TORCHTEXT_GIT_DIR' ]] && cd '$TORCHTEXT_GIT_DIR' && python setup.py clean || true; )
 set -ux
 rm -rf '$TORCHTEXT_BUILD_DIR'
 EOM
@@ -1094,7 +1094,7 @@ if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
 			find "$TORCHTEXT_BUILD_DIR" -type f -executable -exec ldd {} \; 2>/dev/null | grep -vF "$TORCHTEXT_BUILD_DIR/" | grep -vF "$CONDA_ENV_DIR/" | grep -vF "$CUDA_INSTALL_DIR/" | sed 's/ (0x[0-9a-fx]\+)//g' | sort | uniq
 			echo
 			echo "Installing Torchtext into conda environment..."
-			pip uninstall $CFG_AUTO_YES torchtext 2>/dev/null || true
+			pip uninstall $CFG_AUTO_YES torchtext || true
 			python setup.py install
 			echo
 			echo "Removing build directory..."
