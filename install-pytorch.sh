@@ -663,7 +663,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six setuptools onnx protobuf libprotobuf  # For TensorRT
 	conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pybind11 pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
 	[[ -n "$CFG_TORCHVISION_TAG" ]] && conda install $CFG_AUTO_YES typing_extensions numpy requests scipy scikit-learn-intelex  # For Torchvision
-	[[ -n "$CFG_TORCHAUDIO_TAG" ]] && conda install $CFG_AUTO_YES numpy scipy scikit-learn-intelex librosa kaldi_io  # For Torchaudio
+	[[ -n "$CFG_TORCHAUDIO_TAG" ]] && conda install $CFG_AUTO_YES numpy scipy scikit-learn-intelex kaldi_io  # For Torchaudio
 	[[ -n "$CFG_TORCHTEXT_TAG" ]] && conda install $CFG_AUTO_YES tqdm numpy requests nltk spacy sacremoses  # For Torchtext
 	conda install $CFG_AUTO_YES decorator appdirs mako numpy six platformdirs  # For pip packages
 	conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
