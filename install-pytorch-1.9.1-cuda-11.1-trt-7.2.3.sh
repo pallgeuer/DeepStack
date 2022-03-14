@@ -1,4 +1,4 @@
-#!/bin/bash -i
+#!/bin/bash
 # Install PyTorch into a conda environment
 
 # Retrieve the script directory

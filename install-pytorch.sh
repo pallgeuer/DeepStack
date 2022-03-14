@@ -5,6 +5,7 @@
 
 # Use bash strict mode
 set -euo pipefail
+unset HISTFILE
 
 # Retrieve the script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -169,6 +170,7 @@ read -r -d '' UNINSTALLER_HEADER << EOM || true
 
 # Use bash strict mode
 set -xeuo pipefail
+unset HISTFILE
 EOM
 read -r -d '' UNINSTALLER_CONTENTS << EOM || true
 # Remove this uninstaller script

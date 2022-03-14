@@ -4,6 +4,7 @@
 
 # Use bash strict mode
 set -euo pipefail
+unset HISTFILE
 
 # Retrieve the script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -97,11 +98,12 @@ UNINSTALLER_SCRIPT="$UNINSTALLERS_DIR/uninstall-$CFG_CONDA_ENV-opencv-python.sh"
 echo "Creating uninstaller script: $UNINSTALLER_SCRIPT"
 [[ ! -d "$UNINSTALLERS_DIR" ]] && mkdir "$UNINSTALLERS_DIR"
 read -r -d '' UNINSTALLER_HEADER << EOM || true
-#!/bin/bash -ix
+#!/bin/bash -i
 # Uninstall $CFG_CONDA_ENV
 
 # Use bash strict mode
-set -euo pipefail
+set -xeuo pipefail
+unset HISTFILE
 EOM
 read -r -d '' UNINSTALLER_CONTENTS << EOM || true
 # Remove this uninstaller script

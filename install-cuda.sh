@@ -1,4 +1,4 @@
-#!/bin/bash -i
+#!/bin/bash
 # Install an isolated CUDA/cuDNN stack
 
 # Use bash strict mode

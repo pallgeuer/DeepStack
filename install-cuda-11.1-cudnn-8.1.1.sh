@@ -1,4 +1,4 @@
-#!/bin/bash -i
+#!/bin/bash
 # Install an isolated CUDA/cuDNN stack
 
 # Retrieve the script directory

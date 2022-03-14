@@ -1,4 +1,4 @@
-#!/bin/bash -i
+#!/bin/bash
 # Install OpenCV python into a conda environment
 # Note: On Ubuntu 20.04 you may need to launch with CFG_OPENCV_STRICT=0 CFG_OPENCV_CMAKE="-DWITH_TBB=OFF"
 

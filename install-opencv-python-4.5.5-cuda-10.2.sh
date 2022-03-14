@@ -1,4 +1,4 @@
-#!/bin/bash -i
+#!/bin/bash
 # Install OpenCV python into a conda environment
 
 # Retrieve the script directory
