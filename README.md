@@ -1,6 +1,6 @@
 # Deep Learning Stack
 
-**Version:** 1.1
+**Version:** 1.2
 
 **Author:** Philipp Allgeuer
 
