@@ -297,6 +297,7 @@ if [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
 		git submodule update --init --recursive
 		git submodule status
 		[[ -f "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc" ]] && sed -i 's/TORCH_WARN("Leaking Caffe2 thread-pool after fork.");/;/g' "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc"
+		[[ -f "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py" ]] && sed -i "s|additional_options = {|&'pybind11_PREFER_third_party': 'pybind11_PREFER_third_party',|" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
 		if [[ -n "$CFG_TENSORRT_URL" ]]; then
 			if [[ -n "$CFG_TENSORRT_ONNX_TAG" ]]; then
 				(
@@ -308,10 +309,7 @@ if [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
 					git submodule status
 				)
 			fi
-			if [[ -f "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py" ]]; then
-				sed -i "s/'BUILD_', 'USE_', 'CMAKE_'/&, 'TENSORRT_'/" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
-				sed -i "s|additional_options = {|&'pybind11_PREFER_third_party': 'pybind11_PREFER_third_party',|" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
-			fi
+			[[ -f "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py" ]] && sed -i "s/'BUILD_', 'USE_', 'CMAKE_'/&, 'TENSORRT_'/" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
 			[[ -f "$PYTORCH_GIT_DIR/caffe2/contrib/tensorrt/tensorrt_tranformer.cc" ]] && sed -i "s/^\s*auto cutResult = opt::OptimizeForBackend(\*pred_net, supports, trt_converter)$/&;/" "$PYTORCH_GIT_DIR/caffe2/contrib/tensorrt/tensorrt_tranformer.cc"
 			[[ -f "$PYTORCH_GIT_DIR/third_party/onnx-tensorrt/builtin_op_importers.cpp" ]] && sed -i "s/constexpr auto getMatrixOp = \[\]/auto getMatrixOp = []/g" "$PYTORCH_GIT_DIR/third_party/onnx-tensorrt/builtin_op_importers.cpp"
 		fi
@@ -665,7 +663,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	conda install $CFG_AUTO_YES cython
 	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
 	[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six setuptools onnx protobuf libprotobuf  # For TensorRT
-	conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pybind11 pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
+	conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
 	[[ -n "$CFG_TORCHVISION_TAG" ]] && conda install $CFG_AUTO_YES typing_extensions numpy requests scipy scikit-learn-intelex  # For Torchvision
 	[[ -n "$CFG_TORCHAUDIO_TAG" ]] && conda install $CFG_AUTO_YES numpy scipy scikit-learn-intelex kaldi_io  # For Torchaudio
 	[[ -n "$CFG_TORCHTEXT_TAG" ]] && conda install $CFG_AUTO_YES tqdm numpy requests nltk spacy sacremoses  # For Torchtext
