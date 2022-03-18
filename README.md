@@ -1,4 +1,4 @@
-# Deep Learning Stack
+# DeepStack: Customizable Deep Learning Stack Installation Scripts
 
 **Version:** 1.2
 
@@ -8,18 +8,18 @@ Setting up a deep learning stack can be quite a complex and involved task,
 especially for those new to the task. Even for experienced users, further
 wanting to have *multiple* independent deep learning stacks in parallel on the
 same machine vastly increases the difficulty (e.g. multiple simultaneous
-versions of CUDA). This repository seeks to address this issue, while at the
-same time automating the entire process. Furthermore, for optimal performance
-this repository manually compiles libraries like OpenCV and PyTorch, as, for
-example, PyTorch built from source can be observed to be up to 4x faster than a
-naive install.
+versions of CUDA or PyTorch). This repository seeks to address this issue, while
+at the same time automating the entire process. Furthermore, for optimal
+performance this repository manually compiles libraries like OpenCV and PyTorch,
+as, for example, PyTorch built from source can be observed to be up to 4x faster
+than a naive install.
 
 ## Tested configurations
 
-This repository can be used to install *arbitrary version combinations* of all 
-the component libraries involved, but some configurations will obviously work 
-better than others due to library dependencies and cross-compatibilities. This 
-repository has so far been *tested* on selected combinations of the following 
+This repository can be used to install *arbitrary version combinations* of all
+the component libraries involved, but some configurations will obviously work
+better than others due to library dependencies and cross-compatibilities. This
+repository has so far been *tested* on selected combinations of the following
 component versions:
 
  * **Ubuntu:** 18.04, 20.04 (x86_64)
@@ -35,7 +35,7 @@ component versions:
  * **Torchaudio:** 0.8.2 to 0.10.2
  * **Torchtext:** 0.9.2 to 0.11.2
 
-As stated however, PyTorch versions prior to 1.8.2 LTS can *likely* be built 
+As stated however, PyTorch versions prior to 1.8.2 LTS can *likely* be built
 with this repository, it just hasn't been tested yet.
 
 ## Prerequisites
@@ -216,14 +216,14 @@ Python into a conda environment. Note that this does not install development
 files into the conda environment, so you cannot easily compile further libraries
 against this install of OpenCV.
 
- * `install-pytorch.sh`: Compiles and installs development versions of PyTorch, 
-OpenCV, and optionally Torchvision, Torchaudio, Torchtext and TensorRT, into a 
+ * `install-pytorch.sh`: Compiles and installs development versions of PyTorch,
+OpenCV, and optionally Torchvision, Torchaudio, Torchtext and TensorRT, into a
 conda environment.
 
-Each of these scripts have many required (and optional) configuration 
-parameters, which are clearly documented in the Configuration section of the 
-corresponding script source code. Note that you should *not* run multiple 
-instances of the same script in parallel, as this could result in race 
+Each of these scripts have many required (and optional) configuration
+parameters, which are clearly documented in the Configuration section of the
+corresponding script source code. Note that you should *not* run multiple
+instances of the same script in parallel, as this could result in race
 conditions and errors.
 
 For instance, you can install CUDA 11.5 with cuDNN 8.3.2 using the one-liner:
@@ -266,19 +266,19 @@ does not explicitly compile TensorRT into PyTorch:
 CFG_CONDA_ENV=myproj ./install-pytorch-1.10.2-cuda-11.3-trtext-8.2.3.sh
 ```
 This may be useful in order to side-step compatibility issues, and does not
-prevent you from exporting PyTorch models to TensorRT via ONNX as normal. For 
-instance, PyTorch 1.10 is not directly compatible with TensorRT 8 and above (due 
-to removal of deprecated APIs), and TensorRT 7 does not support Python 3.9+ or 
-CUDA 11.2+ (even though at first from the website it seems CUDA 11.2 is 
-supported). TensorRT 7 also only officially supports up to cuDNN 8.1.1, which 
+prevent you from exporting PyTorch models to TensorRT via ONNX as normal. For
+instance, PyTorch 1.10 is not directly compatible with TensorRT 8 and above (due
+to removal of deprecated APIs), and TensorRT 7 does not support Python 3.9+ or
+CUDA 11.2+ (even though at first from the website it seems CUDA 11.2 is
+supported). TensorRT 7 also only officially supports up to cuDNN 8.1.1, which
 may not match up well to the desired CUDA version.
 
 In most of the above commands, two other commonly useful configuration variables
 aside from `CFG_CONDA_ENV` are `CFG_AUTO_ANSWER=1` (automatically answer yes to
-all prompts) and `CFG_STAGE=X` (e.g. if set to 3 only the first three 
-installation stages will be executed). The PyTorch installation script also has 
-a configuration variable `CFG_ALLOW_SUDO`, which if set to 0 skips any sudo 
-commands, which are generally only used at the beginning for `apt install`. 
+all prompts) and `CFG_STAGE=X` (e.g. if set to 3 only the first three
+installation stages will be executed). The PyTorch installation script also has
+a configuration variable `CFG_ALLOW_SUDO`, which if set to 0 skips any sudo
+commands, which are generally only used at the beginning for `apt install`.
 Running with `CFG_STAGE=-1` allows just these to be executed.
 
 If anything at all goes wrong during the installation process, the script exits
