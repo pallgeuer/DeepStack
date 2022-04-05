@@ -34,6 +34,10 @@ CFG_MAX_GCC_VERSION="${CFG_MAX_GCC_VERSION:-}"
 # CUDA toolkit patch URLs to use (https://developer.nvidia.com/cuda-toolkit-archive -> CUDA Toolkit X.X -> Linux -> x86_64 -> Ubuntu -> UU.04 -> runfile (local))
 CFG_CUDA_PATCH_URLS="${CFG_CUDA_PATCH_URLS:-}"
 
+# CUDA samples version and URL (only used for CUDA 11.6+, tag should be one of these: https://github.com/NVIDIA/cuda-samples/tags)
+CFG_CUDA_SAMPLES_TAG="${CFG_CUDA_SAMPLES_TAG:-v$CFG_CUDA_VERSION}"
+CFG_CUDA_SAMPLES_VERSION="${CFG_CUDA_SAMPLES_VERSION:-${CFG_CUDA_SAMPLES_TAG#v}}"
+
 # cuDNN version and URL to use (https://developer.nvidia.com/rdp/cudnn-download OR https://developer.nvidia.com/rdp/cudnn-archive -> cuDNN vY.Y.Y for CUDA X.X -> cuDNN Library / Local Installer for Linux x86_64 (right-click) -> Copy link address, should be *.tar.xz or *.tgz)
 # Example: CFG_CUDNN_VERSION=7.6.5
 # Example: CFG_CUDNN_URL='https://developer.nvidia.com/compute/machine-learning/cudnn/secure/7.6.5.32/Production/10.1_20191031/cudnn-10.1-linux-x64-v7.6.5.32.tgz'
@@ -56,6 +60,8 @@ echo "CFG_ROOT_DIR = $CFG_ROOT_DIR"
 echo "CFG_CUDA_VERSION = $CFG_CUDA_VERSION"
 echo "CFG_CUDA_URL = $CFG_CUDA_URL"
 echo "CFG_CUDA_PATCH_URLS = $CFG_CUDA_PATCH_URLS"
+echo "CFG_CUDA_SAMPLES_TAG = $CFG_CUDA_SAMPLES_TAG"
+echo "CFG_CUDA_SAMPLES_VERSION = $CFG_CUDA_SAMPLES_VERSION"
 echo "CFG_CUDNN_VERSION = $CFG_CUDNN_VERSION"
 echo "CFG_CUDNN_URL = $CFG_CUDNN_URL"
 echo "CFG_CUDA_NAME = $CFG_CUDA_NAME"
@@ -226,7 +232,8 @@ if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
 	read -n 1 -p "Continue [ENTER] "
 	echo
 	sudo rm -rf /var/log/cuda-installer.log
-	sudo sh "$CUDA_RUNFILE" --toolkit --toolkitpath="$CUDA_INSTALL_DIR" --samples --samplespath="$LOCAL_CUDA_DIR" --librarypath="$LOCAL_CUDA_SYSTEM_DIR" --no-man-page --override
+	sh "$CUDA_RUNFILE" --help |& grep -q -- "--samplespath=" && CUDA_SAMPLES_CMDS=(--samples --samplespath="$LOCAL_CUDA_DIR") || CUDA_SAMPLES_CMDS=()
+	sudo sh "$CUDA_RUNFILE" --toolkit --toolkitpath="$CUDA_INSTALL_DIR" "${CUDA_SAMPLES_CMDS[@]}" --librarypath="$LOCAL_CUDA_SYSTEM_DIR" --no-man-page --override
 	echo
 	echo "You can ignore the PATH / LD_LIBRARY_PATH advice above, and not worry about 'Incomplete installation"'!'"' as we already have our own NVIDIA driver installed"
 	echo
@@ -246,7 +253,7 @@ if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
 		read -n 1 -p "Continue [ENTER] "
 		echo
 		sudo rm -rf /var/log/cuda-installer.log
-		sudo sh "$CUDA_PATCH_RUNFILE" --toolkit --toolkitpath="$CUDA_INSTALL_DIR" --samples --samplespath="$LOCAL_CUDA_DIR" --librarypath="$LOCAL_CUDA_SYSTEM_DIR" --no-man-page --override
+		sudo sh "$CUDA_PATCH_RUNFILE" --toolkit --toolkitpath="$CUDA_INSTALL_DIR" "${CUDA_SAMPLES_CMDS[@]}" --librarypath="$LOCAL_CUDA_SYSTEM_DIR" --no-man-page --override
 		echo
 		echo "You can ignore the PATH / LD_LIBRARY_PATH advice above, and not worry about 'Incomplete installation"'!'"' as we already have our own NVIDIA driver installed"
 		echo
@@ -396,6 +403,19 @@ if [[ -z "$(find -H "$CUDA_INSTALL_DIR/lib64" -type f -name "libcudnn*")" ]]; th
 fi
 echo
 
+# Install CUDA samples if they are not part of the toolkit
+if find "$LOCAL_CUDA_DIR" -maxdepth 1 -type d \( -name "NVIDIA_CUDA-*_Samples" -o -name "cuda-samples" \) -exec false {} + -quit; then
+	echo "Cloning CUDA samples $CFG_CUDA_SAMPLES_VERSION..."
+	(
+		set -x
+		cd "$LOCAL_CUDA_DIR"
+		git clone https://github.com/NVIDIA/cuda-samples.git
+		cd "$LOCAL_CUDA_DIR/cuda-samples"
+		git checkout "$CFG_CUDA_SAMPLES_TAG"
+	)
+	echo
+fi
+
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 2 ]] && exit 0
 
@@ -404,14 +424,15 @@ echo
 #
 
 # Variables
-CUDA_SAMPLES_DIR="$(find "$LOCAL_CUDA_DIR" -type d -name "NVIDIA_CUDA-*_Samples" | head -n 1)"
+CUDA_SAMPLES_DIR="$(find "$LOCAL_CUDA_DIR" -maxdepth 1 -type d \( -name "NVIDIA_CUDA-*_Samples" -o -name "cuda-samples" \) | sort | head -n 1)"
 CUDA_SAMPLES_COMPILED="$CUDA_SAMPLES_DIR/compiled"
+CUDA_SAMPLES_BIN="$CUDA_SAMPLES_DIR/bin/x86_64"
 
 # Stage 3 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
 if [[ -f '$CUDA_ADD_PATH' ]]; then (set +ux; source '$CUDA_ADD_PATH'; set -ux; if cd '$CUDA_SAMPLES_DIR'; then make clean -j'$(nproc)' >/dev/null; fi;); fi
-rm -rf '$CUDA_SAMPLES_DIR/bin'
+rm -rf '$CUDA_SAMPLES_BIN'
 rm -f '$CUDA_SAMPLES_COMPILED'
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
@@ -423,9 +444,7 @@ echo "Compiling the CUDA samples as a test..."
 if [[ -z "$CFG_QUICK" ]] && [[ ! -f "$CUDA_SAMPLES_COMPILED" ]]; then
 	(
 		cd "$CUDA_SAMPLES_DIR"
-		[[ -f "$CUDA_SAMPLES_DIR/0_Simple/cudaNvSci/Makefile" ]] && mv "$CUDA_SAMPLES_DIR/0_Simple/cudaNvSci/Makefile" "$CUDA_SAMPLES_DIR/0_Simple/cudaNvSci/Makefile.DISABLED"
-		[[ -f "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkan/Makefile" ]] && mv "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkan/Makefile" "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkan/Makefile.DISABLED"
-		[[ -f "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkanMMAP/Makefile" ]] && mv "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkanMMAP/Makefile" "$CUDA_SAMPLES_DIR/2_Graphics/simpleVulkanMMAP/Makefile.DISABLED"
+		find "$CUDA_SAMPLES_DIR" -type f \( -path "*/simpleVulkan/Makefile" -o -path "*/simpleVulkanMMAP/Makefile" -o -path "*/cudaNvSci/Makefile" \) -exec mv {} {}.DISABLED \;
 		set +u
 		source "$CUDA_ADD_PATH"
 		set -u
@@ -437,20 +456,20 @@ if [[ -z "$CFG_QUICK" ]] && [[ ! -f "$CUDA_SAMPLES_COMPILED" ]]; then
 		echo "make -j$(nproc)"
 		time make -j"$(nproc)"
 		echo
-		echo "Running: $CUDA_SAMPLES_DIR/bin/x86_64/linux/release/deviceQuery"
-		"$CUDA_SAMPLES_DIR/bin/x86_64/linux/release/deviceQuery"
+		echo "Running: $CUDA_SAMPLES_BIN/linux/release/deviceQuery"
+		"$CUDA_SAMPLES_BIN/linux/release/deviceQuery"
 		echo
-		echo "Running: $CUDA_SAMPLES_DIR/bin/x86_64/linux/release/bandwidthTest"
-		"$CUDA_SAMPLES_DIR/bin/x86_64/linux/release/bandwidthTest"
+		echo "Running: $CUDA_SAMPLES_BIN/linux/release/bandwidthTest"
+		"$CUDA_SAMPLES_BIN/linux/release/bandwidthTest"
 		echo
-		echo "Running: $CUDA_SAMPLES_DIR/bin/x86_64/linux/release/UnifiedMemoryStreams"
-		"$CUDA_SAMPLES_DIR/bin/x86_64/linux/release/UnifiedMemoryStreams"
+		echo "Running: $CUDA_SAMPLES_BIN/linux/release/UnifiedMemoryStreams"
+		"$CUDA_SAMPLES_BIN/linux/release/UnifiedMemoryStreams"
 		echo
 		echo "Marking samples as successfully built..."
 		touch "$CUDA_SAMPLES_COMPILED"
 		echo "Cleaning up CUDA samples build..."
 		make clean -j"$(nproc)" >/dev/null
-		rm -rf "$CUDA_SAMPLES_DIR/bin"
+		rm -rf "$CUDA_SAMPLES_BIN"
 	)
 fi
 echo
