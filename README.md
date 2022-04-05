@@ -274,8 +274,8 @@ supported). TensorRT 7 also only officially supports up to cuDNN 8.1.1, which
 may not match up well to the desired CUDA version.
 
 In most of the above commands, two other commonly useful configuration variables
-aside from `CFG_CONDA_ENV` are `CFG_AUTO_ANSWER=1` (automatically answer yes to
-all prompts) and `CFG_STAGE=X` (e.g. if set to 3 only the first three
+aside from `CFG_CONDA_ENV` are `CFG_AUTO_ANSWER=0` (do not automatically answer
+yes to all prompts) and `CFG_STAGE=X` (e.g. if set to 3 only the first three
 installation stages will be executed). The PyTorch installation script also has
 a configuration variable `CFG_ALLOW_SUDO`, which if set to 0 skips any sudo
 commands, which are generally only used at the beginning for `apt install`.

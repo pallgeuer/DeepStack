@@ -21,7 +21,7 @@ CFG_STAGE="${CFG_STAGE:-0}"
 CFG_QUICK="${CFG_QUICK:-}"
 
 # Whether to have faith and auto-answer all prompts
-CFG_AUTO_ANSWER="${CFG_AUTO_ANSWER:-0}"
+CFG_AUTO_ANSWER="${CFG_AUTO_ANSWER:-1}"
 
 # Whether to allow/execute commands that require sudo
 CFG_ALLOW_SUDO="${CFG_ALLOW_SUDO:-1}"
@@ -83,11 +83,11 @@ cd "$CFG_ROOT_DIR"
 
 # Clean up configuration variables
 [[ "$CFG_STAGE" -lt -1 ]] 2>/dev/null && CFG_STAGE=0
-if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
-	CFG_AUTO_YES=
-else
-	CFG_AUTO_ANSWER="1"
+if [[ "$CFG_AUTO_ANSWER" == "1" ]]; then
 	CFG_AUTO_YES=-y
+else
+	CFG_AUTO_ANSWER="0"
+	CFG_AUTO_YES=
 fi
 [[ "$CFG_ALLOW_SUDO" != "1" ]] && CFG_ALLOW_SUDO="0"
 CFG_ROOT_DIR="$(pwd)"

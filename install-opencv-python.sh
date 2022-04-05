@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CFG_STAGE="${CFG_STAGE:-0}"
 
 # Whether to have faith and auto-answer all prompts
-CFG_AUTO_ANSWER="${CFG_AUTO_ANSWER:-0}"
+CFG_AUTO_ANSWER="${CFG_AUTO_ANSWER:-1}"
 
 # Root directory to use for downloading and compiling libraries and storing files in the process of installation
 CFG_ROOT_DIR="${CFG_ROOT_DIR:-$SCRIPT_DIR}"
@@ -48,11 +48,11 @@ cd "$CFG_ROOT_DIR"
 
 # Clean up configuration variables
 [[ "$CFG_STAGE" -le 0 ]] 2>/dev/null && CFG_STAGE=0
-if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
-	CFG_AUTO_YES=
-else
-	CFG_AUTO_ANSWER="1"
+if [[ "$CFG_AUTO_ANSWER" == "1" ]]; then
 	CFG_AUTO_YES=-y
+else
+	CFG_AUTO_ANSWER="0"
+	CFG_AUTO_YES=
 fi
 CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
