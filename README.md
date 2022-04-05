@@ -26,8 +26,8 @@ component versions:
  * **Conda:** 4.8.2 to 4.11.0
  * **NVIDIA driver:** 470 to 510
  * **Python:** 3.6 to 3.9
- * **CUDA:** 10.1 to 11.5
- * **cuDNN:** 7.6.5 to 8.3.2
+ * **CUDA:** 10.1 to 11.6
+ * **cuDNN:** 7.6.5 to 8.4.0
  * **OpenCV:** 3.4.17 to 4.5.5
  * **TensorRT:** 6.0.1 to 8.2.3
  * **PyTorch:** 1.8.2 to 1.11.0
