@@ -12,7 +12,7 @@ versions of CUDA or PyTorch). This repository seeks to address this issue, while
 at the same time automating the entire process. Furthermore, for optimal
 performance this repository manually compiles libraries like OpenCV and PyTorch,
 as, for example, PyTorch built from source can be observed to be up to 4x faster
-than a naive install.
+than a naive install in some cases.
 
 ## Tested configurations
 
@@ -30,10 +30,10 @@ component versions:
  * **cuDNN:** 7.6.5 to 8.3.2
  * **OpenCV:** 3.4.17 to 4.5.5
  * **TensorRT:** 6.0.1 to 8.2.3
- * **PyTorch:** 1.8.2 to 1.10.2
- * **Torchvision:** 0.9.2 to 0.11.3
- * **Torchaudio:** 0.8.2 to 0.10.2
- * **Torchtext:** 0.9.2 to 0.11.2
+ * **PyTorch:** 1.8.2 to 1.11.0
+ * **Torchvision:** 0.9.2 to 0.12.0
+ * **Torchaudio:** 0.8.2 to 0.11.0
+ * **Torchtext:** 0.9.2 to 0.12.0
 
 As stated however, PyTorch versions prior to 1.8.2 LTS can *likely* be built
 with this repository, it just hasn't been tested yet.
