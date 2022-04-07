@@ -300,6 +300,14 @@ if [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
 		git submodule status
 		[[ -f "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc" ]] && sed -i 's/TORCH_WARN("Leaking Caffe2 thread-pool after fork.");/;/g' "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc"
 		[[ -f "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py" ]] && sed -i "s|additional_options = {|&'pybind11_PREFER_third_party': 'pybind11_PREFER_third_party',|" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
+		[[ -f "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" ]] && grep -Fq '${CMAKE_CURRENT_SOURCE_DIR}/../modules' "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" && ! grep -Fq 'target_include_directories(convert_and_benchmark ' "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" && patch -s -u -f -F 0 -N -r - --no-backup-if-mismatch "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" >/dev/null << 'EOM' || true
+@@ -107,4 +107,5 @@
+ if(USE_OBSERVERS AND USE_OPENCV)
+   caffe2_binary_target("convert_and_benchmark.cc")
++  target_include_directories(convert_and_benchmark PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../modules)
+   target_link_libraries(convert_and_benchmark ${OpenCV_LIBS})
+ endif()
+EOM
 		if [[ -n "$CFG_TENSORRT_URL" ]]; then
 			if [[ -n "$CFG_TENSORRT_ONNX_TAG" ]]; then
 				(
