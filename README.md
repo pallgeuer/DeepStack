@@ -29,7 +29,7 @@ component versions:
  * **CUDA:** 10.1 to 11.6
  * **cuDNN:** 7.6.5 to 8.4.0
  * **OpenCV:** 3.4.17 to 4.5.5
- * **TensorRT:** 6.0.1 to 8.2.3
+ * **TensorRT:** 6.0.1 to 8.2.4
  * **PyTorch:** 1.8.2 to 1.11.0
  * **Torchvision:** 0.9.2 to 0.12.0
  * **Torchaudio:** 0.8.2 to 0.11.0
