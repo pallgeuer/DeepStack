@@ -23,7 +23,7 @@ repository has so far been *tested* on selected combinations of the following
 component versions:
 
  * **Ubuntu:** 18.04, 20.04 (x86_64)
- * **Conda:** 4.8.2 to 4.11.0
+ * **Conda:** 4.8.2 to 4.12.0
  * **NVIDIA driver:** 470 to 510
  * **Python:** 3.6 to 3.9
  * **CUDA:** 10.1 to 11.6
