@@ -1,6 +1,54 @@
 Test Commands
 =============
 
+Default installer scripts:
+
+- https://developer.nvidia.com/cuda-toolkit-archive
+	- If a version of CUDA 11.4 newer than 11.4.4 is released then update install-cuda-11.4-cudnn-8.3.2.sh
+	- If a version of CUDA 11.5 newer than 11.5.2 is released then update install-cuda-11.5-cudnn-8.3.2.sh
+	- If a version of CUDA 11.6 newer than 11.6.2 is released then update install-cuda-11.6-cudnn-8.4.0.sh
+	- If a version of CUDA 11.7 or newer is released then add it
+
+- https://github.com/NVIDIA/cuda-samples/releases
+	- If a version of CUDA 11.4 samples newer than 11.4.1 is released then update install-cuda-11.4-cudnn-8.3.2.sh
+	- If a version of CUDA 11.5 samples newer than 11.5 is released then update install-cuda-11.5-cudnn-8.3.2.sh
+	- If a version of CUDA 11.6 samples newer than 11.6 is released then update install-cuda-11.6-cudnn-8.4.0.sh
+
+- https://docs.nvidia.com/deeplearning/tensorrt/archives/index.html (-> Support Matrix)
+	- If some cuDNN 8.3.X becomes the targeted cuDNN for some non-EA TensorRT 8.4.Y then update install-cuda-11.4-cudnn-8.3.2.sh and install-cuda-11.5-cudnn-8.3.2.sh (if there is more than one such (X,Y) pair, then use the first with 11.4 and second with 11.5)
+	- If some cuDNN 8.4.X becomes the targeted cuDNN for some non-EA TensorRT >=8.4 then update install-cuda-11.6-cudnn-8.4.0.sh
+	- If a version of TensorRT >8.2.4 is released that targets cuDNN 8.2.1 and CUDA 11.3 then update install-pytorch-1.10.2-cuda-11.3-trtext-8.2.4.sh and install-pytorch-1.11.0-cuda-11.3-trtext-8.2.4.sh
+
+- https://github.com/onnx/onnx-tensorrt/tags
+	- If a version of onnx-tensorrt newer than 22.02 is released that explicitly supports the version of TensorRT 8.2.4+ associated with CUDA 11.3 then update install-pytorch-1.10.2-cuda-11.3-trtext-8.2.4.sh and install-pytorch-1.11.0-cuda-11.3-trtext-8.2.4.sh
+
+- https://github.com/opencv/opencv-python/releases
+	- If the opencv-python GitHub releases a tag newer than 63 for OpenCV 3 then update install-opencv-python-3.4.17-cuda-10.1.sh
+	- If the opencv-python GitHub releases a tag newer than 64 for OpenCV 4 then update install-opencv-python-4.5.5-cuda-10.2.sh
+
+- https://pytorch.org/get-started/locally
+	- If a version of PyTorch 1.11 newer than 1.11.0 is released then update install-pytorch-1.11.0-cuda-*.sh (also check if CUDA 11.4+ is supported by it [also conda search -c pytorch magma-cuda*] and update CUDA/TensorRT/ONNX-TensorRT if so)
+	- If a version of PyTorch 1.12 or newer is released then add it
+	- If a new version of PyTorch is released then check whether it explicitly supports TensorRT 8 yet, and update if so
+
+- https://github.com/opencv/opencv/tags
+	- If a version of OpenCV newer than 4.5.5 is released then update install-pytorch-1.11.0-cuda-*.sh
+
+- If PyTorch, Torchvision, Torchaudio, Torchtext, TensorRT, OpenCV all support Python 3.10 then update:
+	- https://github.com/pytorch/vision#installation
+	- https://github.com/pytorch/audio#dependencies
+	- https://github.com/pytorch/text#installation
+	- https://docs.nvidia.com/deeplearning/tensorrt/archives/index.html -> Support Matrix -> Ctrl+F "Python wheel"
+	- conda search -c conda-forge opencv | grep py310
+	- conda search -c pytorch pytorch | egrep 'py3\.?10'
+
+Further links:
+
+- cuDNN
+	- https://developer.nvidia.com/rdp/cudnn-download (newest)
+	- https://developer.nvidia.com/rdp/cudnn-archive (all except newest)
+	- https://docs.nvidia.com/deeplearning/cudnn/archives/index.html (-> Support Matrix)
+
 You can test all CUDA installers using:
 	# Make sure no clashing installations already present
 	# Give console infinite scrollback
