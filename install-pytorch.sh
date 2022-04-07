@@ -300,14 +300,40 @@ if [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
 		git submodule status
 		[[ -f "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc" ]] && sed -i 's/TORCH_WARN("Leaking Caffe2 thread-pool after fork.");/;/g' "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc"
 		[[ -f "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py" ]] && sed -i "s|additional_options = {|&'pybind11_PREFER_third_party': 'pybind11_PREFER_third_party',|" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
-		[[ -f "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" ]] && grep -Fq '${CMAKE_CURRENT_SOURCE_DIR}/../modules' "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" && ! grep -Fq 'target_include_directories(convert_and_benchmark ' "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" && patch -s -u -f -F 0 -N -r - --no-backup-if-mismatch "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" >/dev/null << 'EOM' || true
-@@ -107,4 +107,5 @@
- if(USE_OBSERVERS AND USE_OPENCV)
+		if [[ -f "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" ]]; then
+			grep -Fq '${CMAKE_CURRENT_SOURCE_DIR}/../modules' "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" && ! grep -Fq 'target_include_directories(convert_and_benchmark ' "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" && patch -s -u -f -F 0 -N -r - --no-backup-if-mismatch "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" >/dev/null << 'EOM' || true
+@@ -109,2 +109,3 @@
    caffe2_binary_target("convert_and_benchmark.cc")
 +  target_include_directories(convert_and_benchmark PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../modules)
    target_link_libraries(convert_and_benchmark ${OpenCV_LIBS})
- endif()
 EOM
+			grep -q '\WBUILD_CAFFE2\W' "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" && patch -s -u -f -F 0 -N -r - --no-backup-if-mismatch "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" >/dev/null << 'EOM' || true
+@@ -61,2 +61,2 @@
+-if(USE_CUDA)
++if(USE_CUDA AND BUILD_CAFFE2)
+   caffe2_binary_target("inspect_gpu.cc")
+@@ -84,2 +84,2 @@
+-if(USE_ZMQ)
++if(USE_ZMQ AND BUILD_CAFFE2)
+   caffe2_binary_target("zmq_feeder.cc")
+@@ -89,2 +89,2 @@
+-if(USE_MPI)
++if(USE_MPI AND BUILD_CAFFE2)
+   caffe2_binary_target("run_plan_mpi.cc")
+@@ -94,2 +94,2 @@
+-if(USE_OPENCV AND USE_LEVELDB)
++if(USE_OPENCV AND USE_LEVELDB AND BUILD_CAFFE2)
+   caffe2_binary_target("convert_encoded_to_raw_leveldb.cc")
+@@ -101,2 +101,2 @@
+-if(USE_OPENCV)
++if(USE_OPENCV AND BUILD_CAFFE2)
+   caffe2_binary_target("make_image_db.cc")
+@@ -108,2 +108,2 @@
+-if(USE_OBSERVERS AND USE_OPENCV)
++if(USE_OBSERVERS AND USE_OPENCV AND BUILD_CAFFE2)
+   caffe2_binary_target("convert_and_benchmark.cc")
+EOM
+		fi
 		if [[ -n "$CFG_TENSORRT_URL" ]]; then
 			if [[ -n "$CFG_TENSORRT_ONNX_TAG" ]]; then
 				(
