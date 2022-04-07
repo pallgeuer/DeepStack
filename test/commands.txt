@@ -16,7 +16,7 @@ You can test all PyTorch installers using:
 	# Consider manually pre-downloading all the required TensorRT installers
 	# Give console infinite scrollback
 	cd ~/Programs/DeepStack
-	installers=(install-pytorch-*.sh); CFG_STAGE=-1 CFG_AUTO_ANSWER=1 ./"${installers[0]}"; for installer in "${installers[@]}"; do echo; echo "RUNNING INSTALLER: $installer"; if CFG_ALLOW_SUDO=0 CFG_AUTO_ANSWER=1 ./"$installer"; then notify-send -a Konsole -h string:desktop-entry:org.kde.konsole SUCCESS "Successfully installed: $installer"; else notify-send -a Konsole -h string:desktop-entry:org.kde.konsole FAILURE "FAILED TO INSTALL: $installer"; fi; done
+	installers=(install-pytorch-*.sh); CFG_STAGE=-1 ./"${installers[0]}"; for installer in "${installers[@]}"; do echo; echo "RUNNING INSTALLER: $installer"; if CFG_ALLOW_SUDO=0 ./"$installer"; then notify-send -a Konsole -h string:desktop-entry:org.kde.konsole SUCCESS "Successfully installed: $installer"; else notify-send -a Konsole -h string:desktop-entry:org.kde.konsole FAILURE "FAILED TO INSTALL: $installer"; fi; done
 	# UNDO: Rename Installers to InstallersOLD if you want to keep them
 	# UNDO: for uninstaller in Uninstallers/uninstall-pytorch-*.sh; do "$uninstaller"; done
 	# UNDO: Rename InstallersOLD back to Installers if necessary
