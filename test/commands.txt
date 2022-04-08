@@ -3,6 +3,8 @@ Test Commands
 
 Default installer scripts:
 
+- Look if README.md should be changed if you update anything! (Version numbers as well as example scripts in the how-to)
+
 - https://developer.nvidia.com/cuda-toolkit-archive
 	- If a version of CUDA 11.4 newer than 11.4.4 is released then update install-cuda-11.4-cudnn-8.3.2.sh
 	- If a version of CUDA 11.5 newer than 11.5.2 is released then update install-cuda-11.5-cudnn-8.3.2.sh

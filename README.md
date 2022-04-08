@@ -228,12 +228,12 @@ conditions and errors.
 
 For instance, you can install CUDA 11.5 with cuDNN 8.3.2 using the one-liner:
 ```
-CFG_CUDA_VERSION=11.5 CFG_CUDA_URL='https://developer.download.nvidia.com/compute/cuda/11.5.1/local_installers/cuda_11.5.1_495.29.05_linux.run' CFG_CUDNN_VERSION=8.3.2 CFG_CUDNN_URL='https://developer.nvidia.com/compute/cudnn/secure/8.3.2/local_installers/11.5/cudnn-linux-x86_64-8.3.2.44_cuda11.5-archive.tar.xz' ./install-cuda.sh
+CFG_CUDA_VERSION=11.5 CFG_CUDA_URL='https://developer.download.nvidia.com/compute/cuda/11.5.2/local_installers/cuda_11.5.2_495.29.05_linux.run' CFG_CUDNN_VERSION=8.3.2 CFG_CUDNN_URL='https://developer.nvidia.com/compute/cudnn/secure/8.3.2/local_installers/11.5/cudnn-linux-x86_64-8.3.2.44_cuda11.5-archive.tar.xz' ./install-cuda.sh
 ```
 Or equivalently:
 ```
 export CFG_CUDA_VERSION=11.5
-export CFG_CUDA_URL='https://developer.download.nvidia.com/compute/cuda/11.5.1/local_installers/cuda_11.5.1_495.29.05_linux.run'
+export CFG_CUDA_URL='https://developer.download.nvidia.com/compute/cuda/11.5.2/local_installers/cuda_11.5.2_495.29.05_linux.run'
 export CFG_CUDNN_VERSION=8.3.2
 export CFG_CUDNN_URL='https://developer.nvidia.com/compute/cudnn/secure/8.3.2/local_installers/11.5/cudnn-linux-x86_64-8.3.2.44_cuda11.5-archive.tar.xz'
 ./install-cuda.sh
@@ -259,11 +259,11 @@ environment `trt` based on an existing installation of CUDA 10.1:
 ```
 CFG_CONDA_ENV=trt ./install-pytorch-1.8.2-cuda-10.1-trt-6.0.1.sh
 ```
-The following installs PyTorch 1.10.2 along with TensorRT 8.2.3 into the new
+The following installs PyTorch 1.10.2 along with TensorRT 8.2.4 into the new
 conda environment `myproj` based on an existing installation of CUDA 11.3, but
 does not explicitly compile TensorRT into PyTorch:
 ```
-CFG_CONDA_ENV=myproj ./install-pytorch-1.10.2-cuda-11.3-trtext-8.2.3.sh
+CFG_CONDA_ENV=myproj ./install-pytorch-1.10.2-cuda-11.3-trtext-8.2.4.sh
 ```
 This may be useful in order to side-step compatibility issues, and does not
 prevent you from exporting PyTorch models to TensorRT via ONNX as normal. For
