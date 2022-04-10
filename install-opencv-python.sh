@@ -299,7 +299,7 @@ OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
 set +ux
-if conda activate '$CFG_CONDA_ENV'; then INSTALLED_OPENCVS="\$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ')"; [[ -n "\$INSTALLED_OPENCVS" ]] && pip uninstall -y \$INSTALLED_OPENCVS || true; fi
+if conda activate '$CFG_CONDA_ENV'; then INSTALLED_OPENCVS="\$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ' || true)"; [[ -n "\$INSTALLED_OPENCVS" ]] && pip uninstall -y \$INSTALLED_OPENCVS || true; fi
 set -ux
 rm -rf '$OPENCV_PYTHON_STUB_DIR' '$OPENCV_PYTHON_GIT_DIR'/*.whl
 EOM
@@ -340,7 +340,7 @@ OPENCV_PACKAGE="${OPENCV_PACKAGE%%-*}"
 OPENCV_PACKAGE="${OPENCV_PACKAGE//_/-}"
 if ! pip show "$OPENCV_PACKAGE" &>/dev/null; then
 	echo "Uninstalling any existing OpenCV from conda environment..."
-	INSTALLED_OPENCVS="$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ')"
+	INSTALLED_OPENCVS="$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ' || true)"
 	[[ -n "$INSTALLED_OPENCVS" ]] && pip uninstall $CFG_AUTO_YES $INSTALLED_OPENCVS || true
 	echo "Installing built OpenCV python wheel..."
 	pip install "$OPENCV_WHEEL"
@@ -388,6 +388,7 @@ EOM
 	if ! pip show "opencv-python" &>/dev/null; then
 		pip install "$OPENCV_STUB_WHEEL"
 	fi
+	echo
 fi
 
 # Stop if stage limit reached
