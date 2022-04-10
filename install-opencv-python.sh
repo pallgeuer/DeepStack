@@ -343,6 +343,9 @@ if ! pip show "$OPENCV_PACKAGE" &>/dev/null; then
 	pip uninstall $CFG_AUTO_YES $(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
 	echo "Installing built OpenCV python wheel..."
 	pip install "$OPENCV_WHEEL"
+	echo
+	echo "Showing installed OpenCV build information..."
+	python -c "import cv2; print('Found python OpenCV', cv2.__version__); print(cv2.getBuildInformation())"
 fi
 echo
 
@@ -384,9 +387,6 @@ EOM
 	if ! pip show "opencv-python" &>/dev/null; then
 		pip install "$OPENCV_STUB_WHEEL"
 	fi
-	echo
-	echo "Showing installed OpenCV build information..."
-	python -c "import cv2; print('Found python OpenCV', cv2.__version__); print(cv2.getBuildInformation())"
 fi
 
 # Stop if stage limit reached
