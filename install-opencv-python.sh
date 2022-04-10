@@ -301,7 +301,7 @@ Commands to undo stage 3:
 set +ux
 if conda activate '$CFG_CONDA_ENV'; then INSTALLED_OPENCVS="\$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ' || true)"; [[ -n "\$INSTALLED_OPENCVS" ]] && pip uninstall -y \$INSTALLED_OPENCVS || true; fi
 set -ux
-rm -rf '$OPENCV_PYTHON_STUB_DIR' '$OPENCV_PYTHON_GIT_DIR'/*.whl
+rm -rf '$OPENCV_PYTHON_STUB_DIR' '$OPENCV_PYTHON_GIT_DIR'/*.whl '$OPENCV_PYTHON_GIT_DIR/_skbuild'
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
@@ -324,6 +324,9 @@ if find "$OPENCV_PYTHON_GIT_DIR" -maxdepth 1 -type f -name "opencv_*.whl" -exec 
 		export ENABLE_HEADLESS="$CFG_OPENCV_HEADLESS"
 		export MAKEFLAGS="-j$(nproc)"
 		time pip wheel --verbose --use-feature=in-tree-build .
+		echo
+		echo "Removing build directory..."
+		rm -rf "$OPENCV_PYTHON_GIT_DIR/_skbuild"
 	)
 fi
 echo
