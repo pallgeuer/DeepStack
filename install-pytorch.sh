@@ -794,8 +794,11 @@ if [[ ! -f "$CONDA_PREFIX/bin/opencv_version" ]]; then
 		cp "$OPENCV_BUILD_DIR/install_manifest.txt" "$OPENCV_GIT_DIR/install_manifest.txt"
 		echo
 		echo "Running opencv_version script and showing build information..."
-		"$OPENCV_BUILD_DIR/bin/opencv_version"
+		"$CONDA_PREFIX/bin/opencv_version"
 		python -c "import cv2; print('Found Python OpenCV', cv2.__version__); print(cv2.getBuildInformation())"
+		echo
+		echo "Removing build directory..."
+		rm -rf "$OPENCV_BUILD_DIR"
 	)
 fi
 echo
