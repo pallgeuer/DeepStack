@@ -44,6 +44,10 @@ CFG_CONDA_CREATE="${CFG_CONDA_CREATE:-1}"  # Set this to anything other than "tr
 # Python version to use for the created conda environment (check compatibility based on python tags: https://pypi.org/project/opencv-python)
 # Example: CFG_CONDA_PYTHON=3.9
 
+# Whether to clean (post-installation) the local working directory (0 = Do not clean, 1 = Clean build products, 2 = Clean everything) and conda cache (conda clean command, also affects uninstaller)
+CFG_CLEAN_WORKDIR="${CFG_CLEAN_WORKDIR:-2}"
+CFG_CLEAN_CONDA="${CFG_CLEAN_CONDA:-1}"
+
 # Enter the root directory
 cd "$CFG_ROOT_DIR"
 
@@ -62,6 +66,8 @@ CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 [[ "$CFG_OPENCV_CONTRIB" != "1" ]] && CFG_OPENCV_CONTRIB="0"
 [[ "$CFG_OPENCV_HEADLESS" != "0" ]] && CFG_OPENCV_HEADLESS="1"
 [[ "$CFG_OPENCV_STRICT" != "1" ]] && CFG_OPENCV_STRICT="0"
+[[ "$CFG_CLEAN_WORKDIR" != "2" ]] && [[ "$CFG_CLEAN_WORKDIR" != "1" ]] && CFG_CLEAN_WORKDIR="0"
+[[ "$CFG_CLEAN_CONDA" != "1" ]] && CFG_CLEAN_CONDA="0"
 
 # Display the configuration
 echo
@@ -79,6 +85,8 @@ echo "CFG_OPENCV_CMAKE = $CFG_OPENCV_CMAKE"
 echo "CFG_CONDA_CREATE = $CFG_CONDA_CREATE"
 echo "CFG_CONDA_ENV = $CFG_CONDA_ENV"
 echo "CFG_CONDA_PYTHON = $CFG_CONDA_PYTHON"
+echo "CFG_CLEAN_WORKDIR = $CFG_CLEAN_WORKDIR"
+echo "CFG_CLEAN_CONDA = $CFG_CLEAN_CONDA"
 echo
 if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
 	read -n 1 -p "Continue [ENTER] "
@@ -140,6 +148,7 @@ echo
 ENVS_DIR="$CFG_ROOT_DIR/envs"
 ENV_DIR="$ENVS_DIR/$CFG_CONDA_ENV"
 OPENCV_PYTHON_GIT_DIR="$ENV_DIR/opencv-python"
+OPENCV_PYTHON_COMPILED="$ENV_DIR/opencv-python-compiled"
 
 # Stage 1 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
@@ -158,7 +167,7 @@ echo
 
 # Clone the OpenCV repositories
 echo "Cloning OpenCV python build tag $CFG_OPENCV_PYTHON_TAG..."
-if [[ ! -d "$OPENCV_PYTHON_GIT_DIR" ]]; then
+if [[ ! -f "$OPENCV_PYTHON_COMPILED" ]] && [[ ! -d "$OPENCV_PYTHON_GIT_DIR" ]]; then
 	(
 		set -x
 		cd "$ENV_DIR"
@@ -183,7 +192,8 @@ echo
 # Stage 2 uninstall
 UNINSTALLER_COMMANDS="Commands to undo stage 2:"$'\n'"set +ux"
 [[ "$CFG_CONDA_CREATE" == "1" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda deactivate"$'\n'"conda env remove -n '$CFG_CONDA_ENV'"
-UNINSTALLER_COMMANDS+=$'\n'"conda clean -y --all"$'\n'"set -ux"
+[[ "$CFG_CLEAN_CONDA" == "1" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda clean -y --all"
+UNINSTALLER_COMMANDS+=$'\n'"set -ux"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
@@ -269,12 +279,23 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 		echo "Failed to parse Eigen version required by Ceres"
 		exit 1
 	fi
-	conda clean $CFG_AUTO_YES --all
 	set -u
 	[[ -f "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh"
 	[[ -f "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh"
+	echo
 	echo "Performing pip check..."
-	pip check
+	echo -en "\033[0;33m"
+	pip check || true
+	echo -en "\033[0m"
+	echo
+fi
+
+# Clean conda cache
+if [[ "$CFG_CLEAN_CONDA" == "1" ]]; then
+	echo "Cleaning conda cache..."
+	set +u
+	conda clean $CFG_AUTO_YES --all
+	set -u
 	echo
 fi
 
@@ -299,18 +320,19 @@ OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 # Stage 3 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
+rm -rf '$OPENCV_PYTHON_COMPILED'
 set +ux
 if conda activate '$CFG_CONDA_ENV'; then INSTALLED_OPENCVS="\$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ' || true)"; [[ -n "\$INSTALLED_OPENCVS" ]] && pip uninstall -y \$INSTALLED_OPENCVS || true; fi
 set -ux
-rm -rf '$OPENCV_PYTHON_STUB_DIR' '$OPENCV_PYTHON_GIT_DIR'/*.whl '$OPENCV_PYTHON_GIT_DIR/_skbuild'
+rm -rf '$OPENCV_PYTHON_GIT_DIR'/{_skbuild,*.whl,*.egg-info,opencv/.cache} '$OPENCV_PYTHON_STUB_DIR'
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
 
-# Build OpenCV
+# Build OpenCV python
 echo "Building OpenCV python build tag $CFG_OPENCV_PYTHON_TAG..."
-if find "$OPENCV_PYTHON_GIT_DIR" -maxdepth 1 -type f -name "opencv_*.whl" -exec false {} +; then
+if [[ ! -f "$OPENCV_PYTHON_COMPILED" ]] && find "$OPENCV_PYTHON_GIT_DIR" -maxdepth 1 -type f -name "opencv_*.whl" -exec false {} +; then
 	(
 		rm -rf "$OPENCV_PYTHON_GIT_DIR"/*.whl
 		cd "$OPENCV_PYTHON_GIT_DIR"
@@ -325,37 +347,40 @@ if find "$OPENCV_PYTHON_GIT_DIR" -maxdepth 1 -type f -name "opencv_*.whl" -exec 
 		export ENABLE_HEADLESS="$CFG_OPENCV_HEADLESS"
 		export MAKEFLAGS="-j$(nproc)"
 		time pip wheel --verbose --use-feature=in-tree-build .
-		echo
-		echo "Removing build directory..."
-		rm -rf "$OPENCV_PYTHON_GIT_DIR/_skbuild"
 	)
 fi
 echo
 
-# Install OpenCV
+# Install OpenCV python
 echo "Installing OpenCV python build tag $CFG_OPENCV_PYTHON_TAG..."
-OPENCV_WHEEL="$(find "$OPENCV_PYTHON_GIT_DIR" -maxdepth 1 -type f -name "opencv_*.whl" -print -quit)"
-if [[ -z "$OPENCV_WHEEL" ]]; then
-	echo "Failed to find output OpenCV wheel"
-	exit 1
-fi
-OPENCV_PACKAGE="$(basename "$OPENCV_WHEEL")"
-OPENCV_PACKAGE="${OPENCV_PACKAGE%%-*}"
-OPENCV_PACKAGE="${OPENCV_PACKAGE//_/-}"
-if ! pip show "$OPENCV_PACKAGE" &>/dev/null; then
-	echo "Uninstalling any existing OpenCV from conda environment..."
-	INSTALLED_OPENCVS="$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ' || true)"
-	[[ -n "$INSTALLED_OPENCVS" ]] && pip uninstall $CFG_AUTO_YES $INSTALLED_OPENCVS || true
-	echo "Installing built OpenCV python wheel..."
-	pip install "$OPENCV_WHEEL"
-	echo
-	echo "Showing installed OpenCV build information..."
-	python -c "import cv2; print('Found python OpenCV', cv2.__version__); print(cv2.getBuildInformation())"
+if [[ ! -f "$OPENCV_PYTHON_COMPILED" ]]; then
+	OPENCV_WHEEL="$(find "$OPENCV_PYTHON_GIT_DIR" -maxdepth 1 -type f -name "opencv_*.whl" -print -quit)"
+	if [[ -z "$OPENCV_WHEEL" ]]; then
+		echo "Failed to find output OpenCV wheel"
+		exit 1
+	fi
+	OPENCV_PACKAGE="$(basename "$OPENCV_WHEEL")"
+	OPENCV_PACKAGE="${OPENCV_PACKAGE%%-*}"
+	OPENCV_PACKAGE="${OPENCV_PACKAGE//_/-}"
+	if ! pip show "$OPENCV_PACKAGE" &>/dev/null; then
+		echo "Uninstalling any existing OpenCV from conda environment..."
+		INSTALLED_OPENCVS="$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ' || true)"
+		[[ -n "$INSTALLED_OPENCVS" ]] && pip uninstall $CFG_AUTO_YES $INSTALLED_OPENCVS || true
+		echo "Installing built OpenCV python wheel..."
+		pip install "$OPENCV_WHEEL"
+	fi
 fi
 echo
 
-# Install OpenCV stub package if required
-if [[ "$OPENCV_PACKAGE" != "opencv-python" ]]; then
+# Clean the OpenCV python build
+if [[ "$CFG_CLEAN_WORKDIR" -ge 1 ]]; then
+	echo "Cleaning up OpenCV python build..."
+	rm -rf "$OPENCV_PYTHON_GIT_DIR"/{_skbuild,*.whl,*.egg-info,opencv/.cache}
+	echo
+fi
+
+# Install OpenCV python stub package if required
+if [[ ! -f "$OPENCV_PYTHON_COMPILED" ]] && [[ "$OPENCV_PACKAGE" != "opencv-python" ]]; then
 	OPENCV_VERSION_LONG="$(pip show "$OPENCV_PACKAGE" | grep 'Version: ' | head -n1 | cut -d' ' -f2)"
 	if [[ -z "$OPENCV_VERSION_LONG" ]]; then
 		echo "Unable to determine installed OpenCV package version"
@@ -378,8 +403,8 @@ setup(
 	packages=['opencv-python'],
 )
 EOM
-		cd "$OPENCV_PYTHON_STUB_DIR"
-		pip wheel --verbose --use-feature=in-tree-build .
+			cd "$OPENCV_PYTHON_STUB_DIR"
+			pip wheel --verbose --use-feature=in-tree-build .
 		)
 	fi
 	echo
@@ -395,8 +420,46 @@ EOM
 	echo
 fi
 
+# Clean the OpenCV python stub package build
+if [[ "$CFG_CLEAN_WORKDIR" -ge 1 ]]; then
+	echo "Cleaning up OpenCV python stub package build..."
+	rm -rf "$OPENCV_PYTHON_STUB_DIR"/{build,*.whl,*.egg-info}
+	echo
+fi
+
+# Show OpenCV python build information
+echo "Showing installed OpenCV build information..."
+python -c "import cv2; print('Found python OpenCV', cv2.__version__); print(cv2.getBuildInformation())"
+echo
+
+# Mark OpenCV python as compiled
+[[ ! -f "$OPENCV_PYTHON_COMPILED" ]] && touch "$OPENCV_PYTHON_COMPILED"
+
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 3 ]] && exit 0
+
+#
+# Stage 4
+#
+
+# Stage 4 uninstall
+read -r -d '' UNINSTALLER_COMMANDS << EOM || true
+Commands to undo stage 4:
+# None
+EOM
+add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+echo "$UNINSTALLER_COMMANDS"
+echo
+
+# Clean up local working directory
+if [[ "$CFG_CLEAN_WORKDIR" -ge 2 ]]; then
+	echo "Cleaning local working directory..."
+	find "$ENV_DIR" -mindepth 1 -not -name "$(basename "$OPENCV_PYTHON_COMPILED")" -prune -exec rm -rf {} +
+	echo
+fi
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq 4 ]] && exit 0
 
 #
 # Finish
