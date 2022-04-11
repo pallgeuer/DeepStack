@@ -152,6 +152,9 @@ for CUDA_PATCH_URL in "${CUDA_PATCH_URLS[@]}"; do
 	CUDA_PATCH_RUNFILES+=("$INSTALLERS_DIR/${CUDA_PATCH_URL##*/}")
 done
 CUDNN_TAR="$INSTALLERS_DIR/${CFG_CUDNN_URL##*/}"
+MAIN_CUDA_DIR="$CFG_ROOT_DIR/CUDA"
+LOCAL_CUDA_DIR="$MAIN_CUDA_DIR/$CFG_CUDA_NAME"
+CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 
 # Stage 1 uninstall
 CUDA_PATCH_RUNFILES_QUOTED=
@@ -171,31 +174,35 @@ echo
 echo "Downloading installers..."
 [[ ! -d "$INSTALLERS_DIR" ]] && mkdir "$INSTALLERS_DIR"
 echo
-echo "Downloading CUDA $CFG_CUDA_VERSION..."
-[[ ! -f "$CUDA_RUNFILE" ]] && wget "$CFG_CUDA_URL" -P "$INSTALLERS_DIR"
-echo
-for i in "${!CUDA_PATCH_URLS[@]}"; do
-	CUDA_PATCH_URL="${CUDA_PATCH_URLS[$i]}"
-	CUDA_PATCH_RUNFILE="${CUDA_PATCH_RUNFILES[$i]}"
-	echo "Downloading CUDA patch '$(basename "$CUDA_PATCH_RUNFILE")'..."
-	[[ ! -f "$CUDA_PATCH_RUNFILE" ]] && wget "$CUDA_PATCH_URL" -P "$INSTALLERS_DIR"
+if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
+	echo "Downloading CUDA $CFG_CUDA_VERSION..."
+	[[ ! -f "$CUDA_RUNFILE" ]] && wget "$CFG_CUDA_URL" -P "$INSTALLERS_DIR"
 	echo
-done
-echo "Downloading cuDNN $CFG_CUDNN_VERSION..."
-if [[ ! -f "$CUDNN_TAR" ]]; then
-	echo "Please log in with your NVIDIA account and don't close the browser..."
-	xdg-open 'https://www.nvidia.com/en-us/account' || echo "xdg-open failed: Please manually perform the requested action"
-	read -n 1 -p "Press enter when you have done that [ENTER] "
-	echo "Opening download URL: $CFG_CUDNN_URL"
-	echo "Please save tar to: $CUDNN_TAR"
-	xdg-open "$CFG_CUDNN_URL" || echo "xdg-open failed: Please manually perform the requested action"
-	read -n 1 -p "Press enter when it has finished downloading [ENTER] "
-	if [[ ! -f "$CUDNN_TAR" ]]; then
-		echo "File does not exist: $CUDNN_TAR"
-		exit 1
-	fi
+	for i in "${!CUDA_PATCH_URLS[@]}"; do
+		CUDA_PATCH_URL="${CUDA_PATCH_URLS[$i]}"
+		CUDA_PATCH_RUNFILE="${CUDA_PATCH_RUNFILES[$i]}"
+		echo "Downloading CUDA patch '$(basename "$CUDA_PATCH_RUNFILE")'..."
+		[[ ! -f "$CUDA_PATCH_RUNFILE" ]] && wget "$CUDA_PATCH_URL" -P "$INSTALLERS_DIR"
+		echo
+	done
 fi
-echo
+if [[ -z "$(find -H "$CUDA_INSTALL_DIR/lib64" -type f -name "libcudnn*")" ]]; then
+	echo "Downloading cuDNN $CFG_CUDNN_VERSION..."
+	if [[ ! -f "$CUDNN_TAR" ]]; then
+		echo "Please log in with your NVIDIA account and don't close the browser..."
+		xdg-open 'https://www.nvidia.com/en-us/account' || echo "xdg-open failed: Please manually perform the requested action"
+		read -n 1 -p "Press enter when you have done that [ENTER] "
+		echo "Opening download URL: $CFG_CUDNN_URL"
+		echo "Please save tar to: $CUDNN_TAR"
+		xdg-open "$CFG_CUDNN_URL" || echo "xdg-open failed: Please manually perform the requested action"
+		read -n 1 -p "Press enter when it has finished downloading [ENTER] "
+		if [[ ! -f "$CUDNN_TAR" ]]; then
+			echo "File does not exist: $CUDNN_TAR"
+			exit 1
+		fi
+	fi
+	echo
+fi
 
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 1 ]] && exit 0
@@ -205,9 +212,6 @@ echo
 #
 
 # Variables
-CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
-MAIN_CUDA_DIR="$CFG_ROOT_DIR/CUDA"
-LOCAL_CUDA_DIR="$MAIN_CUDA_DIR/$CFG_CUDA_NAME"
 LOCAL_CUDA_SYSTEM_DIR="$LOCAL_CUDA_DIR/system"
 LOCAL_CUDNN_DIR="$LOCAL_CUDA_DIR/cuDNN-$CFG_CUDNN_VERSION"
 CUDA_SAMPLES_COMPILED="$LOCAL_CUDA_DIR/samples_compiled"
