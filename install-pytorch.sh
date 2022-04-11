@@ -1,7 +1,5 @@
 #!/bin/bash -i
 # Install PyTorch into a conda environment
-# Alternatively if you're looking into having a Docker build of PyTorch:
-#   https://github.com/cresset-template/cresset
 
 # Use bash strict mode
 set -euo pipefail
@@ -78,6 +76,11 @@ CFG_CONDA_CREATE="${CFG_CONDA_CREATE:-1}"  # Set this to anything other than "tr
 # Python version to use for the created conda environment (see https://github.com/pytorch/vision#installation for compatibility)
 # Example: CFG_CONDA_PYTHON=3.9
 
+# Whether to clean (post-installation) the downloaded installers (uninstaller always cleans), local working directory (0 = Do not clean, 1 = Clean build products, 2 = Clean everything) and conda cache (conda clean command, also affects uninstaller)
+CFG_CLEAN_INSTALLERS="${CFG_CLEAN_INSTALLERS:-1}"
+CFG_CLEAN_WORKDIR="${CFG_CLEAN_WORKDIR:-2}"
+CFG_CLEAN_CONDA="${CFG_CLEAN_CONDA:-1}"
+
 # Enter the root directory
 cd "$CFG_ROOT_DIR"
 
@@ -96,6 +99,9 @@ CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 [[ "$CFG_OPENCV_HEADLESS" != "0" ]] && CFG_OPENCV_HEADLESS="1"
 [[ "$CFG_TENSORRT_PYTORCH" != "1" ]] && CFG_TENSORRT_PYTORCH="0"
 [[ "$CFG_CONDA_CREATE" != "1" ]] && CFG_CONDA_CREATE="0"
+[[ "$CFG_CLEAN_INSTALLERS" != "1" ]] && CFG_CLEAN_INSTALLERS="0"
+[[ "$CFG_CLEAN_WORKDIR" != "2" ]] && [[ "$CFG_CLEAN_WORKDIR" != "1" ]] && CFG_CLEAN_WORKDIR="0"
+[[ "$CFG_CLEAN_CONDA" != "1" ]] && CFG_CLEAN_CONDA="0"
 
 # Display the configuration
 echo
@@ -127,6 +133,9 @@ echo "CFG_TENSORRT_PYTORCH = $CFG_TENSORRT_PYTORCH"
 echo "CFG_CONDA_CREATE = $CFG_CONDA_CREATE"
 echo "CFG_CONDA_ENV = $CFG_CONDA_ENV"
 echo "CFG_CONDA_PYTHON = $CFG_CONDA_PYTHON"
+echo "CFG_CLEAN_INSTALLERS = $CFG_CLEAN_INSTALLERS"
+echo "CFG_CLEAN_WORKDIR = $CFG_CLEAN_WORKDIR"
+echo "CFG_CLEAN_CONDA = $CFG_CLEAN_CONDA"
 echo
 if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
 	read -n 1 -p "Continue [ENTER] "
@@ -203,6 +212,10 @@ if [[ -n "$CFG_TENSORRT_URL" ]]; then
 		echo "Failed to parse TensorRT directory name from: $TENSORRT_TARNAME"
 		exit 1
 	fi
+	MAIN_TENSORRT_DIR="$CFG_ROOT_DIR/TensorRT"
+	TENSORRT_INSTALL_DIR="$MAIN_TENSORRT_DIR/$TENSORRT_DIRNAME"
+	TENSORRT_ENVS_LIST="$TENSORRT_INSTALL_DIR/envs.list"
+	TENSORRT_SAMPLES_COMPILED="$TENSORRT_INSTALL_DIR/samples/compiled-$CFG_CUDA_NAME"
 fi
 
 # Stage 1 uninstall
@@ -219,7 +232,7 @@ echo "Downloading installers..."
 echo
 if [[ -n "$CFG_TENSORRT_URL" ]]; then
 	echo "Downloading TensorRT $CFG_TENSORRT_VERSION..."
-	if [[ ! -f "$TENSORRT_TAR" ]]; then
+	if [[ ! -d "$TENSORRT_INSTALL_DIR" ]] && [[ ! -f "$TENSORRT_TAR" ]]; then
 		echo "Please log in with your NVIDIA account and don't close the browser..."
 		xdg-open 'https://www.nvidia.com/en-us/account' || echo "xdg-open failed: Please manually perform the requested action"
 		read -n 1 -p "Press enter when you have done that [ENTER] "
@@ -245,18 +258,13 @@ fi
 # Variables
 ENVS_DIR="$CFG_ROOT_DIR/envs"
 ENV_DIR="$ENVS_DIR/$CFG_CONDA_ENV"
+PYTORCH_COMPILED="$ENV_DIR/pytorch_compiled"
 PYTORCH_GIT_DIR="$ENV_DIR/pytorch"
 TORCHVISION_GIT_DIR="$ENV_DIR/torchvision"
 TORCHAUDIO_GIT_DIR="$ENV_DIR/torchaudio"
 TORCHTEXT_GIT_DIR="$ENV_DIR/torchtext"
 OPENCV_GIT_DIR="$ENV_DIR/opencv"
 OPENCV_CONTRIB_GIT_DIR="$ENV_DIR/opencv_contrib"
-if [[ -n "$CFG_TENSORRT_URL" ]]; then
-	MAIN_TENSORRT_DIR="$CFG_ROOT_DIR/TensorRT"
-	TENSORRT_INSTALL_DIR="$MAIN_TENSORRT_DIR/$TENSORRT_DIRNAME"
-	TENSORRT_ENVS_LIST="$TENSORRT_INSTALL_DIR/envs.list"
-	TENSORRT_SAMPLES_COMPILED="$TENSORRT_INSTALL_DIR/samples/compiled-$CFG_CUDA_NAME"
-fi
 
 # Stage 2 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
@@ -287,7 +295,7 @@ echo
 
 # Clone the PyTorch repository
 echo "Cloning PyTorch $CFG_PYTORCH_VERSION..."
-if [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
+if [[ ! -f "$PYTORCH_COMPILED" ]] && [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
 	(
 		set -x
 		cd "$ENV_DIR"
@@ -356,7 +364,7 @@ echo
 # Clone the torchvision repository
 if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 	echo "Cloning Torchvision $CFG_TORCHVISION_VERSION..."
-	if [[ ! -d "$TORCHVISION_GIT_DIR" ]]; then
+	if [[ ! -f "$PYTORCH_COMPILED" ]] && [[ ! -d "$TORCHVISION_GIT_DIR" ]]; then
 		(
 			set -x
 			cd "$ENV_DIR"
@@ -375,7 +383,7 @@ fi
 # Clone the torchaudio repository
 if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 	echo "Cloning Torchaudio $CFG_TORCHAUDIO_VERSION..."
-	if [[ ! -d "$TORCHAUDIO_GIT_DIR" ]]; then
+	if [[ ! -f "$PYTORCH_COMPILED" ]] && [[ ! -d "$TORCHAUDIO_GIT_DIR" ]]; then
 		(
 			set -x
 			cd "$ENV_DIR"
@@ -396,7 +404,7 @@ fi
 # Clone the torchtext repository
 if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
 	echo "Cloning Torchtext $CFG_TORCHTEXT_VERSION..."
-	if [[ ! -d "$TORCHTEXT_GIT_DIR" ]]; then
+	if [[ ! -f "$PYTORCH_COMPILED" ]] && [[ ! -d "$TORCHTEXT_GIT_DIR" ]]; then
 		(
 			set -x
 			cd "$ENV_DIR"
@@ -414,7 +422,7 @@ fi
 
 # Clone the OpenCV repositories
 echo "Cloning OpenCV $CFG_OPENCV_VERSION..."
-if [[ ! -d "$OPENCV_GIT_DIR" ]]; then
+if [[ ! -f "$PYTORCH_COMPILED" ]] && [[ ! -d "$OPENCV_GIT_DIR" ]]; then
 	(
 		set -x
 		cd "$ENV_DIR"
@@ -614,7 +622,8 @@ fi
 # Stage 3 uninstall
 UNINSTALLER_COMMANDS="Commands to undo stage 3:"$'\n'"set +ux"
 [[ "$CFG_CONDA_CREATE" == "1" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda deactivate"$'\n'"conda env remove -n '$CFG_CONDA_ENV'"
-UNINSTALLER_COMMANDS+=$'\n'"conda clean -y --all"$'\n'"set -ux"
+[[ "$CFG_CLEAN_CONDA" == "1" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda clean -y --all"
+UNINSTALLER_COMMANDS+=$'\n'"set -ux"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
@@ -714,7 +723,6 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 		echo "Failed to parse Eigen version required by Ceres"
 		exit 1
 	fi
-	conda clean $CFG_AUTO_YES --all
 	set -u
 	[[ -f "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh"
 	[[ -f "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/deactivate.d/libblas_mkl_deactivate.sh"
@@ -735,6 +743,15 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	echo -en "\033[0;33m"
 	pip check || true
 	echo -en "\033[0m"
+	echo
+fi
+
+# Clean conda cache
+if [[ "$CFG_CLEAN_CONDA" == "1" ]]; then
+	echo "Cleaning conda cache..."
+	set +u
+	conda clean $CFG_AUTO_YES --all
+	set -u
 	echo
 fi
 
@@ -772,7 +789,7 @@ echo
 
 # Build OpenCV
 echo "Building OpenCV $CFG_OPENCV_VERSION..."
-if [[ ! -f "$CONDA_PREFIX/bin/opencv_version" ]]; then
+if [[ ! -f "$PYTORCH_COMPILED" ]] && [[ ! -f "$CONDA_PREFIX/bin/opencv_version" ]]; then
 	(
 		[[ ! -d "$OPENCV_BUILD_DIR" ]] && mkdir "$OPENCV_BUILD_DIR"
 		rm -rf "$OPENCV_BUILD_DIR"/* "$OPENCV_GIT_DIR/.cache"
@@ -798,20 +815,25 @@ if [[ ! -f "$CONDA_PREFIX/bin/opencv_version" ]]; then
 		echo "Running opencv_version script and showing build information..."
 		"$CONDA_PREFIX/bin/opencv_version"
 		python -c "import cv2; print('Found Python OpenCV', cv2.__version__); print(cv2.getBuildInformation())"
-		echo
-		echo "Removing build directory..."
-		rm -rf "$OPENCV_BUILD_DIR"
 	)
 fi
 echo
 
+# Clean the OpenCV build
+if [[ "$CFG_CLEAN_WORKDIR" -ge 1 ]]; then
+	echo "Cleaning up OpenCV build..."
+	rm -rf "$OPENCV_BUILD_DIR" "$OPENCV_GIT_DIR/.cache"
+	echo
+fi
+
 # Install OpenCV stub package if required
 echo "Building OpenCV python stub package for version $CFG_OPENCV_VERSION..."
-[[ ! -d "$OPENCV_PYTHON_STUB_DIR" ]] && mkdir "$OPENCV_PYTHON_STUB_DIR"
-if find "$OPENCV_PYTHON_STUB_DIR" -maxdepth 1 -type f -name "opencv_python-*.whl" -exec false {} +; then
-	(
-		[[ ! -d "$OPENCV_PYTHON_STUB_DIR/opencv-python" ]] && mkdir "$OPENCV_PYTHON_STUB_DIR/opencv-python"
-		cat << EOM > "$OPENCV_PYTHON_STUB_DIR/setup.py"
+if [[ ! -f "$PYTORCH_COMPILED" ]]; then
+	[[ ! -d "$OPENCV_PYTHON_STUB_DIR" ]] && mkdir "$OPENCV_PYTHON_STUB_DIR"
+	if find "$OPENCV_PYTHON_STUB_DIR" -maxdepth 1 -type f -name "opencv_python-*.whl" -exec false {} +; then
+		(
+			[[ ! -d "$OPENCV_PYTHON_STUB_DIR/opencv-python" ]] && mkdir "$OPENCV_PYTHON_STUB_DIR/opencv-python"
+			cat << EOM > "$OPENCV_PYTHON_STUB_DIR/setup.py"
 from setuptools import setup
 setup(
 	name='opencv-python',
@@ -823,21 +845,29 @@ setup(
 	packages=['opencv-python'],
 )
 EOM
-		cd "$OPENCV_PYTHON_STUB_DIR"
-		pip wheel --verbose --use-feature=in-tree-build .
-	)
+			cd "$OPENCV_PYTHON_STUB_DIR"
+			pip wheel --verbose --use-feature=in-tree-build .
+		)
+	fi
+	echo
+	echo "Installing OpenCV python stub package for version $CFG_OPENCV_VERSION..."
+	OPENCV_STUB_WHEEL="$(find "$OPENCV_PYTHON_STUB_DIR" -maxdepth 1 -type f -name "opencv_python-*.whl" -print -quit)"
+	if [[ -z "$OPENCV_STUB_WHEEL" ]]; then
+		echo "Failed to find output OpenCV stub wheel"
+		exit 1
+	fi
+	if ! pip show "opencv-python" &>/dev/null; then
+		pip install "$OPENCV_STUB_WHEEL"
+	fi
 fi
 echo
-echo "Installing OpenCV python stub package for version $CFG_OPENCV_VERSION..."
-OPENCV_STUB_WHEEL="$(find "$OPENCV_PYTHON_STUB_DIR" -maxdepth 1 -type f -name "opencv_python-*.whl" -print -quit)"
-if [[ -z "$OPENCV_STUB_WHEEL" ]]; then
-	echo "Failed to find output OpenCV stub wheel"
-	exit 1
+
+# Clean the OpenCV stub package build
+if [[ "$CFG_CLEAN_WORKDIR" -ge 1 ]]; then
+	echo "Cleaning up OpenCV stub package build..."
+	rm -rf "$OPENCV_PYTHON_STUB_DIR"/{build,*.whl,*.egg-info}
+	echo
 fi
-if ! pip show "opencv-python" &>/dev/null; then
-	pip install "$OPENCV_STUB_WHEEL"
-fi
-echo
 
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 4 ]] && exit 0
@@ -863,7 +893,7 @@ echo
 
 # Build PyTorch
 echo "Building PyTorch $CFG_PYTORCH_VERSION..."
-if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -exec false {} +; then
+if [[ ! -f "$PYTORCH_COMPILED" ]] && find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torch" -exec false {} +; then
 	(
 		[[ ! -d "$PYTORCH_BUILD_DIR" ]] && mkdir "$PYTORCH_BUILD_DIR"
 		rm -rf "$PYTORCH_BUILD_DIR"/*
@@ -927,8 +957,8 @@ pprint.pprint({
 })
 print(torch.rand(5, 3))
 EOM
-		echo
 		if [[ -n "$CFG_TENSORRT_URL" ]] && [[ "$CFG_TENSORRT_PYTORCH" == 1 ]]; then
+			echo
 			echo "Checking PyTorch TensorRT is available in python..."
 			python - << EOM
 from caffe2.python import workspace
@@ -938,13 +968,17 @@ if workspace.C.use_trt:
 else:
 	print("No TensorRT support in PyTorch/Caffe2")
 EOM
-			echo
 		fi
-		echo "Removing build directory..."
-		rm -rf "$PYTORCH_BUILD_DIR"
 	)
 fi
 echo
+
+# Clean the PyTorch build
+if [[ "$CFG_CLEAN_WORKDIR" -ge 1 ]]; then
+	echo "Cleaning up PyTorch build..."
+	rm -rf "$PYTORCH_BUILD_DIR"
+	echo
+fi
 
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 5 ]] && exit 0
@@ -973,7 +1007,7 @@ fi
 # Build Torchvision
 if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 	echo "Building Torchvision $CFG_TORCHVISION_VERSION..."
-	if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchvision-*.egg" -exec false {} +; then
+	if [[ ! -f "$PYTORCH_COMPILED" ]] && find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchvision-*.egg" -exec false {} +; then
 		(
 			[[ ! -d "$TORCHVISION_BUILD_DIR" ]] && mkdir "$TORCHVISION_BUILD_DIR"
 			rm -rf "$TORCHVISION_BUILD_DIR"/*
@@ -1006,12 +1040,14 @@ if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 			echo
 			echo "Installing Torchvision into conda environment..."
 			python setup.py install
-			echo
-			echo "Removing build directory..."
-			rm -rf "$TORCHVISION_BUILD_DIR"
 		)
 	fi
 	echo
+	if [[ "$CFG_CLEAN_WORKDIR" -ge 1 ]]; then
+		echo "Cleaning up Torchvision build..."
+		rm -rf "$TORCHVISION_BUILD_DIR"
+		echo
+	fi
 fi
 
 # Stop if stage limit reached
@@ -1041,7 +1077,7 @@ fi
 # Build Torchaudio
 if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 	echo "Building Torchaudio $CFG_TORCHAUDIO_VERSION..."
-	if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchaudio-*.egg" -exec false {} +; then
+	if [[ ! -f "$PYTORCH_COMPILED" ]] && find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchaudio-*.egg" -exec false {} +; then
 		(
 			[[ ! -d "$TORCHAUDIO_BUILD_DIR" ]] && mkdir "$TORCHAUDIO_BUILD_DIR"
 			rm -rf "$TORCHAUDIO_BUILD_DIR"/*
@@ -1078,12 +1114,14 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 			echo
 			echo "Installing Torchaudio into conda environment..."
 			python setup.py install
-			echo
-			echo "Removing build directory..."
-			rm -rf "$TORCHAUDIO_BUILD_DIR"
 		)
 	fi
 	echo
+	if [[ "$CFG_CLEAN_WORKDIR" -ge 1 ]]; then
+		echo "Cleaning up Torchaudio build..."
+		rm -rf "$TORCHAUDIO_BUILD_DIR"
+		echo
+	fi
 fi
 
 # Stop if stage limit reached
@@ -1113,7 +1151,7 @@ fi
 # Build Torchtext
 if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
 	echo "Building Torchtext $CFG_TORCHTEXT_VERSION..."
-	if find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchtext-*.egg" -exec false {} +; then
+	if [[ ! -f "$PYTORCH_COMPILED" ]] && find "$CONDA_ENV_DIR/lib" -type d -path "*/lib/python*/site-packages/torchtext-*.egg" -exec false {} +; then
 		(
 			[[ ! -d "$TORCHTEXT_BUILD_DIR" ]] && mkdir "$TORCHTEXT_BUILD_DIR"
 			rm -rf "$TORCHTEXT_BUILD_DIR"/*
@@ -1145,16 +1183,52 @@ if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
 			echo
 			echo "Installing Torchtext into conda environment..."
 			python setup.py install
-			echo
-			echo "Removing build directory..."
-			rm -rf "$TORCHTEXT_BUILD_DIR"
 		)
 	fi
 	echo
+	if [[ "$CFG_CLEAN_WORKDIR" -ge 1 ]]; then
+		echo "Cleaning up Torchtext build..."
+		rm -rf "$TORCHTEXT_BUILD_DIR"
+		echo
+	fi
 fi
 
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 8 ]] && exit 0
+
+#
+# Stage 9
+#
+
+# Stage 9 uninstall
+read -r -d '' UNINSTALLER_COMMANDS << EOM || true
+Commands to undo stage 9:
+rm -rf '$PYTORCH_COMPILED'
+EOM
+add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+echo "$UNINSTALLER_COMMANDS"
+echo
+
+# Mark PyTorch as compiled
+[[ ! -f "$PYTORCH_COMPILED" ]] && touch "$PYTORCH_COMPILED"
+
+# Clean up installers
+if [[ "$CFG_CLEAN_INSTALLERS" == "1" ]]; then
+	echo "Cleaning up installers..."
+	[[ -n "$CFG_TENSORRT_URL" ]] && rm -rf "$TENSORRT_TAR"
+	rmdir --ignore-fail-on-non-empty "$INSTALLERS_DIR" || true
+	echo
+fi
+
+# Clean up local working directory
+if [[ "$CFG_CLEAN_WORKDIR" -ge 2 ]]; then
+	echo "Cleaning local working directory..."
+	find "$ENV_DIR" -mindepth 1 -not -name "$(basename "$PYTORCH_COMPILED")" -prune -exec rm -rf {} +
+	echo
+fi
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq 9 ]] && exit 0
 
 #
 # Finish
