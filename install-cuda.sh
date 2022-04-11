@@ -34,13 +34,17 @@ CFG_MAX_GCC_VERSION="${CFG_MAX_GCC_VERSION:-}"
 # CUDA toolkit patch URLs to use (https://developer.nvidia.com/cuda-toolkit-archive -> CUDA Toolkit X.X -> Linux -> x86_64 -> Ubuntu -> UU.04 -> runfile (local))
 CFG_CUDA_PATCH_URLS="${CFG_CUDA_PATCH_URLS:-}"
 
-# CUDA samples version and URL (only used for CUDA 11.6+, tag should be one of these: https://github.com/NVIDIA/cuda-samples/tags)
+# CUDA samples version and URL (tag should be one of these: https://github.com/NVIDIA/cuda-samples/tags)
 CFG_CUDA_SAMPLES_TAG="${CFG_CUDA_SAMPLES_TAG:-v$CFG_CUDA_VERSION}"
 CFG_CUDA_SAMPLES_VERSION="${CFG_CUDA_SAMPLES_VERSION:-${CFG_CUDA_SAMPLES_TAG#v}}"
 
 # cuDNN version and URL to use (https://developer.nvidia.com/rdp/cudnn-download OR https://developer.nvidia.com/rdp/cudnn-archive -> cuDNN vY.Y.Y for CUDA X.X -> cuDNN Library / Local Installer for Linux x86_64 (right-click) -> Copy link address, should be *.tar.xz or *.tgz)
 # Example: CFG_CUDNN_VERSION=7.6.5
 # Example: CFG_CUDNN_URL='https://developer.nvidia.com/compute/machine-learning/cudnn/secure/7.6.5.32/Production/10.1_20191031/cudnn-10.1-linux-x64-v7.6.5.32.tgz'
+
+# Whether to clean (post-installation) the downloaded installers (uninstaller always cleans) and local working directory (0 = Do not clean, 1 = Clean build products, 2 = Clean everything)
+CFG_CLEAN_INSTALLERS="${CFG_CLEAN_INSTALLERS:-1}"
+CFG_CLEAN_WORKDIR="${CFG_CLEAN_WORKDIR:-2}"
 
 # Enter the root directory
 cd "$CFG_ROOT_DIR"
@@ -51,6 +55,8 @@ CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_URL="${CFG_CUDA_URL%/}"
 CFG_CUDNN_URL="${CFG_CUDNN_URL%/}"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
+[[ "$CFG_CLEAN_INSTALLERS" != "1" ]] && CFG_CLEAN_INSTALLERS="0"
+[[ "$CFG_CLEAN_WORKDIR" != "2" ]] && [[ "$CFG_CLEAN_WORKDIR" != "1" ]] && CFG_CLEAN_WORKDIR="0"
 
 # Display the configuration
 echo
@@ -67,6 +73,8 @@ echo "CFG_CUDNN_URL = $CFG_CUDNN_URL"
 echo "CFG_CUDA_NAME = $CFG_CUDA_NAME"
 echo "CFG_CUDA_LOCATION = $CFG_CUDA_LOCATION"
 echo "CFG_MAX_GCC_VERSION = $CFG_MAX_GCC_VERSION"
+echo "CFG_CLEAN_INSTALLERS = $CFG_CLEAN_INSTALLERS"
+echo "CFG_CLEAN_WORKDIR = $CFG_CLEAN_WORKDIR"
 echo
 read -n 1 -p "Continue [ENTER] "
 echo
@@ -202,6 +210,7 @@ MAIN_CUDA_DIR="$CFG_ROOT_DIR/CUDA"
 LOCAL_CUDA_DIR="$MAIN_CUDA_DIR/$CFG_CUDA_NAME"
 LOCAL_CUDA_SYSTEM_DIR="$LOCAL_CUDA_DIR/system"
 LOCAL_CUDNN_DIR="$LOCAL_CUDA_DIR/cuDNN-$CFG_CUDNN_VERSION"
+CUDA_SAMPLES_COMPILED="$LOCAL_CUDA_DIR/samples_compiled"
 
 # Stage 2 uninstall
 UNINSTALLER_COMMANDS='Commands to undo stage 2:'$'\n''(set +x; if [[ -x '"'$CUDA_INSTALL_DIR/bin/cuda-uninstaller'"' ]] && [[ -n "$(find /var/log/nvidia/.uninstallManifests -type f -name "uninstallManifest-*" -exec grep -F '"'$CUDA_INSTALL_DIR/'"' {} \+)" ]]; then sudo '"'$CUDA_INSTALL_DIR/bin/cuda-uninstaller'"'; else echo "Did not call CUDA uninstaller as no matching uninstaller/manifest was found"; fi;)'
@@ -235,7 +244,7 @@ if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
 	sh "$CUDA_RUNFILE" --help |& grep -q -- "--samplespath=" && CUDA_SAMPLES_CMDS=(--samples --samplespath="$LOCAL_CUDA_DIR") || CUDA_SAMPLES_CMDS=()
 	sudo sh "$CUDA_RUNFILE" --toolkit --toolkitpath="$CUDA_INSTALL_DIR" "${CUDA_SAMPLES_CMDS[@]}" --librarypath="$LOCAL_CUDA_SYSTEM_DIR" --no-man-page --override
 	echo
-	echo "You can ignore the PATH / LD_LIBRARY_PATH advice above, and not worry about 'Incomplete installation"'!'"' as we already have our own NVIDIA driver installed"
+	echo -e "\033[1;32mYou can ignore the PATH / LD_LIBRARY_PATH advice above, and not worry about 'Incomplete installation"'!'"' as you should already have manually installed your own NVIDIA driver (see README.md)\033[0m"
 	echo
 	echo "Checking the installation log for anything suspicious..."
 	grep -Ei "\[(WARN|WARNING|ERROR)\]" /var/log/cuda-installer.log || true
@@ -404,7 +413,7 @@ fi
 echo
 
 # Install CUDA samples if they are not part of the toolkit
-if find "$LOCAL_CUDA_DIR" -maxdepth 1 -type d \( -name "NVIDIA_CUDA-*_Samples" -o -name "cuda-samples" \) -exec false {} + -quit; then
+if [[ ! -f "$CUDA_SAMPLES_COMPILED" ]] && find "$LOCAL_CUDA_DIR" -mindepth 1 -maxdepth 1 -type d \( -name "NVIDIA_CUDA-*_Samples" -o -name "cuda-samples" \) -exec false {} + -quit; then
 	echo "Cloning CUDA samples $CFG_CUDA_SAMPLES_VERSION..."
 	(
 		set -x
@@ -424,14 +433,14 @@ fi
 #
 
 # Variables
-CUDA_SAMPLES_DIR="$(find "$LOCAL_CUDA_DIR" -maxdepth 1 -type d \( -name "NVIDIA_CUDA-*_Samples" -o -name "cuda-samples" \) | sort | head -n 1)"
-CUDA_SAMPLES_COMPILED="$CUDA_SAMPLES_DIR/compiled"
+CUDA_SAMPLES_DIR="$(find "$LOCAL_CUDA_DIR" -mindepth 1 -maxdepth 1 -type d \( -name "NVIDIA_CUDA-*_Samples" -o -name "cuda-samples" \) | sort | head -n 1)"
+[[ -z "$CUDA_SAMPLES_DIR" ]] && CUDA_SAMPLES_DIR="$LOCAL_CUDA_DIR/cuda-samples"
 CUDA_SAMPLES_BIN="$CUDA_SAMPLES_DIR/bin/x86_64"
 
 # Stage 3 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
-if [[ -f '$CUDA_ADD_PATH' ]]; then (set +ux; source '$CUDA_ADD_PATH'; set -ux; if cd '$CUDA_SAMPLES_DIR'; then make clean -j'$(nproc)' >/dev/null; fi;); fi
+if [[ -f '$CUDA_ADD_PATH' ]] && [[ -d "$CUDA_SAMPLES_DIR" ]]; then (set +ux; source '$CUDA_ADD_PATH'; set -ux; cd '$CUDA_SAMPLES_DIR' && make clean -j'$(nproc)' >/dev/null;) fi
 rm -rf '$CUDA_SAMPLES_BIN'
 rm -f '$CUDA_SAMPLES_COMPILED'
 EOM
@@ -459,23 +468,75 @@ if [[ -z "$CFG_QUICK" ]] && [[ ! -f "$CUDA_SAMPLES_COMPILED" ]]; then
 		echo "Running: $CUDA_SAMPLES_BIN/linux/release/deviceQuery"
 		"$CUDA_SAMPLES_BIN/linux/release/deviceQuery"
 		echo
-		echo "Running: $CUDA_SAMPLES_BIN/linux/release/bandwidthTest"
-		"$CUDA_SAMPLES_BIN/linux/release/bandwidthTest"
-		echo
-		echo "Running: $CUDA_SAMPLES_BIN/linux/release/UnifiedMemoryStreams"
-		"$CUDA_SAMPLES_BIN/linux/release/UnifiedMemoryStreams"
-		echo
+		if [[ -f "$CUDA_SAMPLES_BIN/linux/release/bandwidthTest" ]]; then
+			echo "Running: $CUDA_SAMPLES_BIN/linux/release/bandwidthTest"
+			"$CUDA_SAMPLES_BIN/linux/release/bandwidthTest"
+			echo
+		fi
+		if [[ -f "$CUDA_SAMPLES_BIN/linux/release/UnifiedMemoryStreams" ]]; then
+			echo "Running: $CUDA_SAMPLES_BIN/linux/release/UnifiedMemoryStreams"
+			"$CUDA_SAMPLES_BIN/linux/release/UnifiedMemoryStreams"
+			echo
+		fi
 		echo "Marking samples as successfully built..."
 		touch "$CUDA_SAMPLES_COMPILED"
-		echo "Cleaning up CUDA samples build..."
-		make clean -j"$(nproc)" >/dev/null
-		rm -rf "$CUDA_SAMPLES_BIN"
 	)
 fi
 echo
 
+# Clean the CUDA samples build
+if [[ "$CFG_CLEAN_WORKDIR" -ge 1 ]]; then
+	echo "Cleaning up CUDA samples build..."
+	if [[ -f "$CUDA_ADD_PATH" ]] && [[ -d "$CUDA_SAMPLES_DIR" ]]; then
+		(
+			set +u
+			source "$CUDA_ADD_PATH"
+			set -u
+			cd "$CUDA_SAMPLES_DIR" && make clean -j"$(nproc)" >/dev/null
+		)
+	fi
+	rm -rf "$CUDA_SAMPLES_BIN"
+	echo
+fi
+
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 3 ]] && exit 0
+
+#
+# Stage 4
+#
+
+# Stage 4 uninstall
+read -r -d '' UNINSTALLER_COMMANDS << EOM || true
+Commands to undo stage 4:
+# None
+EOM
+add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
+echo "$UNINSTALLER_COMMANDS"
+echo
+
+# Clean up installers
+if [[ "$CFG_CLEAN_INSTALLERS" == "1" ]]; then
+	echo "Cleaning up installers..."
+	rm -rf "$CUDA_RUNFILE" "$CUDNN_TAR"
+	for CUDA_PATCH_RUNFILE in "${CUDA_PATCH_RUNFILES[@]}"; do
+		rm -rf "$CUDA_PATCH_RUNFILE"
+	done
+	rmdir --ignore-fail-on-non-empty "$INSTALLERS_DIR" || true
+	echo
+fi
+
+# Clean up local working directory
+if [[ "$CFG_CLEAN_WORKDIR" -ge 2 ]]; then
+	(
+		echo "Cleaning local working directory..."
+		find "$LOCAL_CUDA_DIR" -mindepth 1 -not -name "$(basename "$CUDA_SAMPLES_COMPILED")" -prune -exec rm -rf {} +
+		echo
+	)
+fi
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq 4 ]] && exit 0
 
 #
 # Finish
