@@ -29,6 +29,7 @@ CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION:-/usr/local}"
 
 # OpenCV python git tag (tag should be one of these: https://github.com/opencv/opencv-python/tags, click on the tag to see the corresponding OpenCV version)
 # Example: CFG_OPENCV_PYTHON_TAG=60
+CFG_OPENCV_PYTHON_TAGV="${CFG_OPENCV_PYTHON_TAGV:-$CFG_OPENCV_PYTHON_TAG}"
 CFG_OPENCV_CONTRIB="${CFG_OPENCV_CONTRIB:-1}"
 CFG_OPENCV_HEADLESS="${CFG_OPENCV_HEADLESS:-0}"
 
@@ -37,7 +38,7 @@ CFG_OPENCV_STRICT="${CFG_OPENCV_STRICT:-1}"
 CFG_OPENCV_CMAKE="${CFG_OPENCV_CMAKE:-}"
 
 # Name to use for the created conda environment
-CFG_CONDA_ENV="${CFG_CONDA_ENV:-opencv-$CFG_OPENCV_PYTHON_TAG-$CFG_CUDA_NAME}"
+CFG_CONDA_ENV="${CFG_CONDA_ENV:-opencv-$CFG_OPENCV_PYTHON_TAGV-$CFG_CUDA_NAME}"
 CFG_CONDA_CREATE="${CFG_CONDA_CREATE:-1}"  # Set this to anything other than "true" to not attempt environment creation (environment must already exist and be appropriately configured)
 
 # Python version to use for the created conda environment (check compatibility based on python tags: https://pypi.org/project/opencv-python)
