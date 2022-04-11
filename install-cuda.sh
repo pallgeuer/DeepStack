@@ -271,8 +271,10 @@ if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
 		echo "You can ignore the PATH / LD_LIBRARY_PATH advice above, and not worry about 'Incomplete installation"'!'"' as we already have our own NVIDIA driver installed"
 		echo
 		echo "Checking the installation log for anything suspicious..."
-		grep -Ei "\[(WARN|WARNING|ERROR)\]" /var/log/cuda-installer.log || true
-		grep -Ei " (installed|created directory)" /var/log/cuda-installer.log | grep -Fv " $CUDA_INSTALL_DIR/" | grep -Fv " $LOCAL_CUDA_SYSTEM_DIR/" | grep -Fv "$LOCAL_CUDA_DIR/" | grep -Fv /var/log/nvidia/.uninstallManifests/ || true
+		echo -en "\033[0;33m"
+		grep --color=never -Ei "\[(WARN|WARNING|ERROR)\]" /var/log/cuda-installer.log || true
+		grep -Ei " (installed|created directory)" /var/log/cuda-installer.log | grep -Fv " $CUDA_INSTALL_DIR/" | grep -Fv " $LOCAL_CUDA_SYSTEM_DIR/" | grep -Fv "$LOCAL_CUDA_DIR/" | grep --color=never -Fv /var/log/nvidia/.uninstallManifests/ || true
+		echo -en "\033[0m"
 		echo
 	done
 	echo "Performing CUDA post-installation clean-up steps..."
