@@ -226,7 +226,7 @@ corresponding script source code. Note that you should *not* run multiple
 instances of the same script in parallel, as this could result in race
 conditions and errors.
 
-For instance, you can install CUDA 11.5 with cuDNN 8.3.2 using the one-liner:
+As an example, you can install CUDA 11.5 with cuDNN 8.3.2 using the one-liner:
 ```
 CFG_CUDA_VERSION=11.5 CFG_CUDA_URL='https://developer.download.nvidia.com/compute/cuda/11.5.2/local_installers/cuda_11.5.2_495.29.05_linux.run' CFG_CUDNN_VERSION=8.3.2 CFG_CUDNN_URL='https://developer.nvidia.com/compute/cudnn/secure/8.3.2/local_installers/11.5/cudnn-linux-x86_64-8.3.2.44_cuda11.5-archive.tar.xz' ./install-cuda.sh
 ```
@@ -279,21 +279,27 @@ yes to all prompts) and `CFG_STAGE=X` (e.g. if set to 3 only the first three
 installation stages will be executed). The PyTorch installation script also has
 a configuration variable `CFG_ALLOW_SUDO`, which if set to 0 skips any sudo
 commands, which are generally only used at the beginning for `apt install`.
-Running with `CFG_STAGE=-1` allows just these to be executed.
+Running with `CFG_STAGE=-1` allows just these to be executed. The configuration
+variables `CFG_CLEAN_INSTALLERS`, `CFG_CLEAN_WORKDIR` and `CFG_CLEAN_CONDA`
+control what cleaning actions occur post-install in order to save disk space
+and/or get rid of intermediate/build/installer files. Refer to the
+`Configuration` section of the main scripts in order to get more information on
+the available configuration variables and what values they can take.
 
 If anything at all goes wrong during the installation process, the script exits
 immediately to prevent any possibly unanticipated behaviour. This means that an
 installation has only completed successfully if you see a final line like
 `Finished CUDA stack installation` or `Finished PyTorch installation`.
 
-When running an installer script, subdirectories are created within the main
-directory to store downloaded files, cloned repositories, compiled samples and
-more. As an overview, the created subdirectories are:
+When running an installer script, subdirectories are (at times temporarily)
+created within the main directory to store downloaded files, cloned
+repositories, compiled samples and more. As an overview, the created
+subdirectories are:
 
  * `CUDA`: Stores CUDA samples, and is where they are temporarily compiled.
 
- * `envs`: Stores the cloned git repositories required for the created conda
-environments, e.g. PyTorch git repository.
+ * `envs`: Stores the cloned git repositories required for building the required
+conda environments, e.g. PyTorch git repository.
 
  * `Installers`: Stores downloaded installer files, e.g. CUDA runfiles.
 
