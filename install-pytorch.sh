@@ -184,7 +184,7 @@ EOM
 read -r -d '' UNINSTALLER_CONTENTS << EOM || true
 # Remove this uninstaller script
 rm -rf '$UNINSTALLER_SCRIPT'
-rmdir --ignore-fail-on-non-empty '$UNINSTALLERS_DIR' || true
+rmdir --ignore-fail-on-non-empty '$UNINSTALLERS_DIR' 2>/dev/null || true
 # EOF
 EOM
 UNINSTALLER_CONTENTS=$'\n'"$UNINSTALLER_CONTENTS"
@@ -221,7 +221,7 @@ fi
 # Stage 1 uninstall
 UNINSTALLER_COMMANDS="Commands to undo stage 1:"
 [[ -n "$CFG_TENSORRT_URL" ]] && UNINSTALLER_COMMANDS+=$'\n'"rm -rf '$TENSORRT_TAR'"
-UNINSTALLER_COMMANDS+=$'\n'"rmdir --ignore-fail-on-non-empty '$INSTALLERS_DIR' || true"
+UNINSTALLER_COMMANDS+=$'\n'"rmdir --ignore-fail-on-non-empty '$INSTALLERS_DIR' 2>/dev/null || true"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
@@ -247,6 +247,7 @@ if [[ -n "$CFG_TENSORRT_URL" ]]; then
 	fi
 	echo
 fi
+rmdir --ignore-fail-on-non-empty "$INSTALLERS_DIR" 2>/dev/null || true
 
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 1 ]] && exit 0
@@ -270,8 +271,8 @@ OPENCV_CONTRIB_GIT_DIR="$ENV_DIR/opencv_contrib"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 2:
 rm -rf '$PYTORCH_GIT_DIR' '$TORCHVISION_GIT_DIR' '$TORCHAUDIO_GIT_DIR' '$TORCHTEXT_GIT_DIR' '$OPENCV_GIT_DIR' '$OPENCV_CONTRIB_GIT_DIR'
-rmdir --ignore-fail-on-non-empty '$ENV_DIR' || true
-rmdir --ignore-fail-on-non-empty '$ENVS_DIR' || true
+rmdir --ignore-fail-on-non-empty '$ENV_DIR' 2>/dev/null || true
+rmdir --ignore-fail-on-non-empty '$ENVS_DIR' 2>/dev/null || true
 EOM
 if [[ -n "$CFG_TENSORRT_URL" ]]; then
 	read -r -d '' EXTRA_UNINSTALLER_COMMANDS << EOM || true
@@ -281,7 +282,7 @@ rm -f '$TENSORRT_INSTALL_DIR/data/mnist/'{train,t10k}-{images,labels}-*
 rm -f '$TENSORRT_SAMPLES_COMPILED'
 [[ -f '$TENSORRT_ENVS_LIST' ]] && { grep -vFx '$CFG_CONDA_ENV'$'\n' '$TENSORRT_ENVS_LIST' > '${TENSORRT_ENVS_LIST}.tmp' || true; mv '${TENSORRT_ENVS_LIST}.tmp' '$TENSORRT_ENVS_LIST'; }
 [[ "\$(cat '$TENSORRT_ENVS_LIST' 2>/dev/null | wc -l)" -eq 0 ]] && rm -rf '$TENSORRT_INSTALL_DIR'
-rmdir --ignore-fail-on-non-empty '$MAIN_TENSORRT_DIR' || true
+rmdir --ignore-fail-on-non-empty '$MAIN_TENSORRT_DIR' 2>/dev/null || true
 EOM
 	UNINSTALLER_COMMANDS+=$'\n'"$EXTRA_UNINSTALLER_COMMANDS"
 fi
@@ -1216,7 +1217,7 @@ echo
 if [[ "$CFG_CLEAN_INSTALLERS" == "1" ]]; then
 	echo "Cleaning up installers..."
 	[[ -n "$CFG_TENSORRT_URL" ]] && rm -rf "$TENSORRT_TAR"
-	rmdir --ignore-fail-on-non-empty "$INSTALLERS_DIR" || true
+	rmdir --ignore-fail-on-non-empty "$INSTALLERS_DIR" 2>/dev/null || true
 	echo
 fi
 

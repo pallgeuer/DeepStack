@@ -117,7 +117,7 @@ EOM
 read -r -d '' UNINSTALLER_CONTENTS << EOM || true
 # Remove this uninstaller script
 rm -rf '$UNINSTALLER_SCRIPT'
-rmdir --ignore-fail-on-non-empty '$UNINSTALLERS_DIR' || true
+rmdir --ignore-fail-on-non-empty '$UNINSTALLERS_DIR' 2>/dev/null || true
 # EOF
 EOM
 UNINSTALLER_CONTENTS=$'\n'"$UNINSTALLER_CONTENTS"
@@ -154,8 +154,8 @@ OPENCV_PYTHON_COMPILED="$ENV_DIR/opencv-python-compiled"
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 1:
 rm -rf "$OPENCV_PYTHON_GIT_DIR"
-rmdir --ignore-fail-on-non-empty '$ENV_DIR' || true
-rmdir --ignore-fail-on-non-empty '$ENVS_DIR' || true
+rmdir --ignore-fail-on-non-empty '$ENV_DIR' 2>/dev/null || true
+rmdir --ignore-fail-on-non-empty '$ENVS_DIR' 2>/dev/null || true
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"

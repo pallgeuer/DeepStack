@@ -117,7 +117,7 @@ EOM
 read -r -d '' UNINSTALLER_CONTENTS << EOM || true
 # Remove this uninstaller script
 rm -rf '$UNINSTALLER_SCRIPT'
-rmdir --ignore-fail-on-non-empty '$UNINSTALLERS_DIR' || true
+rmdir --ignore-fail-on-non-empty '$UNINSTALLERS_DIR' 2>/dev/null || true
 # EOF
 EOM
 UNINSTALLER_CONTENTS=$'\n'"$UNINSTALLER_CONTENTS"
@@ -164,7 +164,7 @@ done
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 1:
 rm -rf '$CUDA_RUNFILE' $CUDA_PATCH_RUNFILES_QUOTED'$CUDNN_TAR'
-rmdir --ignore-fail-on-non-empty '$INSTALLERS_DIR' || true
+rmdir --ignore-fail-on-non-empty '$INSTALLERS_DIR' 2>/dev/null || true
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
@@ -203,6 +203,7 @@ if [[ -z "$(find -H "$CUDA_INSTALL_DIR/lib64" -type f -name "libcudnn*")" ]]; th
 	fi
 	echo
 fi
+rmdir --ignore-fail-on-non-empty "$INSTALLERS_DIR" 2>/dev/null || true
 
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 1 ]] && exit 0
@@ -221,7 +222,7 @@ UNINSTALLER_COMMANDS='Commands to undo stage 2:'$'\n''(set +x; if [[ -x '"'$CUDA
 read -r -d '' UNINSTALLER_COMMANDS_EXTRA << EOM || true
 sudo rm -rf '$CUDA_INSTALL_DIR' '$LOCAL_CUDA_SYSTEM_DIR'
 rm -rf '$LOCAL_CUDA_DIR' '$LOCAL_CUDNN_DIR'
-rmdir --ignore-fail-on-non-empty '$MAIN_CUDA_DIR' || true
+rmdir --ignore-fail-on-non-empty '$MAIN_CUDA_DIR' 2>/dev/null || true
 EOM
 UNINSTALLER_COMMANDS="$UNINSTALLER_COMMANDS"$'\n'"$UNINSTALLER_COMMANDS_EXTRA"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
@@ -530,7 +531,7 @@ if [[ "$CFG_CLEAN_INSTALLERS" == "1" ]]; then
 	for CUDA_PATCH_RUNFILE in "${CUDA_PATCH_RUNFILES[@]}"; do
 		rm -rf "$CUDA_PATCH_RUNFILE"
 	done
-	rmdir --ignore-fail-on-non-empty "$INSTALLERS_DIR" || true
+	rmdir --ignore-fail-on-non-empty "$INSTALLERS_DIR" 2>/dev/null || true
 	echo
 fi
 
