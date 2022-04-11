@@ -320,7 +320,6 @@ OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 # Stage 3 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
-rm -rf '$OPENCV_PYTHON_COMPILED'
 set +ux
 if conda activate '$CFG_CONDA_ENV'; then INSTALLED_OPENCVS="\$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ' || true)"; [[ -n "\$INSTALLED_OPENCVS" ]] && pip uninstall -y \$INSTALLED_OPENCVS || true; fi
 set -ux
@@ -432,9 +431,6 @@ echo "Showing installed OpenCV build information..."
 python -c "import cv2; print('Found python OpenCV', cv2.__version__); print(cv2.getBuildInformation())"
 echo
 
-# Mark OpenCV python as compiled
-[[ ! -f "$OPENCV_PYTHON_COMPILED" ]] && touch "$OPENCV_PYTHON_COMPILED"
-
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 3 ]] && exit 0
 
@@ -445,11 +441,14 @@ echo
 # Stage 4 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 4:
-# None
+rm -rf '$OPENCV_PYTHON_COMPILED'
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
+
+# Mark OpenCV python as compiled
+[[ ! -f "$OPENCV_PYTHON_COMPILED" ]] && touch "$OPENCV_PYTHON_COMPILED"
 
 # Clean up local working directory
 if [[ "$CFG_CLEAN_WORKDIR" -ge 2 ]]; then
