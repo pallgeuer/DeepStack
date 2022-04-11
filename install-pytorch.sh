@@ -153,7 +153,7 @@ echo
 # Install system dependencies
 echo "Installing various system dependencies..."
 if [[ "$CFG_ALLOW_SUDO" == "1" ]]; then
-	[[ -n "$CFG_TENSORRT_URL" ]] && [[ -z "$CFG_QUICK" ]] && sudo apt install $CFG_AUTO_YES python3-numpy python3-pillow
+	[[ -n "$CFG_TENSORRT_URL" ]] && [[ -z "$CFG_QUICK" ]] && sudo apt install $CFG_AUTO_YES python3-numpy python3-pil
 	sudo apt install $CFG_AUTO_YES libnuma-dev
 	sudo apt install $CFG_AUTO_YES libva-dev libtbb-dev
 	sudo apt install $CFG_AUTO_YES v4l-utils libv4l-dev
