@@ -732,7 +732,9 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 		echo
 	fi
 	echo "Performing pip check..."
+	echo -en "\033[0;33m"
 	pip check || true
+	echo -en "\033[0m"
 	echo
 fi
 
