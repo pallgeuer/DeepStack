@@ -251,8 +251,10 @@ if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
 	echo -e "\033[1;32mYou can ignore the PATH / LD_LIBRARY_PATH advice above, and not worry about 'Incomplete installation"'!'"' as you should already have manually installed your own NVIDIA driver (see README.md)\033[0m"
 	echo
 	echo "Checking the installation log for anything suspicious..."
-	grep -Ei "\[(WARN|WARNING|ERROR)\]" /var/log/cuda-installer.log || true
-	grep -Ei " (installed|created directory)" /var/log/cuda-installer.log | grep -Fv " $CUDA_INSTALL_DIR/" | grep -Fv " $LOCAL_CUDA_SYSTEM_DIR/" | grep -Fv "$LOCAL_CUDA_DIR/" | grep -Fv /var/log/nvidia/.uninstallManifests/ || true
+	echo -en "\033[0;33m"
+	grep --color=never -Ei "\[(WARN|WARNING|ERROR)\]" /var/log/cuda-installer.log || true
+	grep -Ei " (installed|created directory)" /var/log/cuda-installer.log | grep -Fv " $CUDA_INSTALL_DIR/" | grep -Fv " $LOCAL_CUDA_SYSTEM_DIR/" | grep -Fv "$LOCAL_CUDA_DIR/" | grep --color=never -Fv /var/log/nvidia/.uninstallManifests/ || true
+	echo -en "\033[0m"
 	CUDA_LD_SO_CONF="$(grep -Eo "/etc/ld\.so\.conf\.d/cuda-.*.conf" /var/log/cuda-installer.log)"
 	echo
 	for CUDA_PATCH_RUNFILE in "${CUDA_PATCH_RUNFILES[@]}"; do
