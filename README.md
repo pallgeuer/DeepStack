@@ -291,6 +291,32 @@ immediately to prevent any possibly unanticipated behaviour. This means that an
 installation has only completed successfully if you see a final line like
 `Finished CUDA stack installation` or `Finished PyTorch installation`.
 
+If you see something similar to the following error while running an installer:
+```
+c++: fatal error: Killed signal terminated program cc1plus
+```
+or notice the computer graphics slow down, or otherwise notice that the 
+installation process uses too much RAM, then you can reduce the RAM usage by 
+setting a maximum number of parallel compilation jobs (`MAX_JOBS`) less than the 
+number of virtual CPU cores on your machine (check `nproc`). For instance, on a 
+hyper-threaded machine with 8 physical cores, `nproc` will show 16 virtual cores 
+(often referred to as logical cores or 'threads'), so by default up to 16 
+compilation jobs will be run in parallel at any one time. If this is too much 
+for the amount of available RAM, then you can for example allow only up to 10 
+compilation jobs in parallel using something like:
+```
+MAX_JOBS=10 CFG_CONDA_ENV=pytch ./install-pytorch-1.10.2-cuda-11.3.sh
+```
+It is also advantageous in general if your system has swap activated so that 
+temporary bursts in memory requirements do not have the ability to immediately 
+cause compilation termination, or more serious problems like possible system 
+crashes.
+
+If you have issues executing the installer scripts because of denied 
+permissions, check that all the scripts in the main directory are executable 
+(have the 'x' permission bit set). If not, you can fix the situation using 
+`chmod +x *.sh`.
+
 When running an installer script, subdirectories are (at times temporarily)
 created within the main directory to store downloaded files, cloned
 repositories, compiled samples and more. As an overview, the created
