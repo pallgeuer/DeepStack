@@ -1,6 +1,12 @@
 #!/bin/bash
 # Install an isolated CUDA/cuDNN stack
 
+# Ensure script is being run and not sourced
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+	echo "Please run the ${BASH_SOURCE[0]} script instead of sourcing it!"
+	return 1
+fi
+
 # Use bash strict mode
 set -euo pipefail
 

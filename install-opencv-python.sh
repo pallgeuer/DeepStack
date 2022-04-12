@@ -2,6 +2,12 @@
 # Install OpenCV python into a conda environment
 # CAUTION: Only the OpenCV python bindings will be installed, and the installation will be unusable for linking to via C++ because there are no headers/cmake installed! Use the installation method of OpenCV via the install PyTorch script if you want headers/cmake to be installed!
 
+# Ensure script is being run and not sourced
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+	echo "Please run the ${BASH_SOURCE[0]} script instead of sourcing it!"
+	return 1
+fi
+
 # Use bash strict mode
 set -euo pipefail
 unset HISTFILE
