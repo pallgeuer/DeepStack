@@ -15,6 +15,13 @@ unset HISTFILE
 # Retrieve the script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Retrieve the calling command line
+PARENT_CMDLINE="$(ps -o args= "$PPID" | head -c -1 | tr '\n' ' ')"
+SUPPLIED_CFGS=
+while IFS= read -r ENV_KEY_VALUE; do
+	SUPPLIED_CFGS+=$'\n'"#   $ENV_KEY_VALUE"
+done < <(env | egrep '^CFG_' | sort)
+
 #
 # Configuration
 #
@@ -115,6 +122,7 @@ echo "Creating uninstaller script: $UNINSTALLER_SCRIPT"
 read -r -d '' UNINSTALLER_HEADER << EOM || true
 #!/bin/bash -i
 # Uninstall $CFG_CONDA_ENV
+# Automatically generated using: $PARENT_CMDLINE$SUPPLIED_CFGS
 
 # Use bash strict mode
 set -xeuo pipefail
