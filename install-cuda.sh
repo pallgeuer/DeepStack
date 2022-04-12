@@ -102,6 +102,18 @@ else
 	GXX_PATH=
 fi
 
+# Install system dependencies
+echo "Installing various system dependencies..."
+sudo apt install libfreeimage3 libfreeimage-dev
+sudo apt install libvulkan1 libvulkan-dev
+sudo apt install libglfw3 libglfw3-dev
+sudo apt install g++ freeglut3-dev build-essential libx11-dev libxmu-dev libxi-dev libglu1-mesa libglu1-mesa-dev
+sudo apt install zlib1g
+echo
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq -1 ]] && exit 0
+
 # Initialise uninstaller script
 UNINSTALLERS_DIR="$CFG_ROOT_DIR/Uninstallers"
 UNINSTALLER_SCRIPT="$UNINSTALLERS_DIR/uninstall-$CFG_CUDA_NAME.sh"
@@ -128,15 +140,6 @@ function add_uninstall_cmds()
 	UNINSTALLER_CONTENTS=$'\n'"$1"$'\n'"$UNINSTALLER_CONTENTS"
 	echo "$UNINSTALLER_HEADER"$'\n'"$UNINSTALLER_CONTENTS" > "$UNINSTALLER_SCRIPT"
 }
-echo
-
-# Install system dependencies
-echo "Installing various system dependencies..."
-sudo apt install libfreeimage3 libfreeimage-dev
-sudo apt install libvulkan1 libvulkan-dev
-sudo apt install libglfw3 libglfw3-dev
-sudo apt install g++ freeglut3-dev build-essential libx11-dev libxmu-dev libxi-dev libglu1-mesa libglu1-mesa-dev
-sudo apt install zlib1g
 echo
 
 #
