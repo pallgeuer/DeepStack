@@ -721,14 +721,15 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	conda config --env --append channels pytorch
 	conda config --env --set channel_priority strict
 	conda install $CFG_AUTO_YES cython
-	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig setuptools six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
-	[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six setuptools onnx protobuf libprotobuf  # For TensorRT
-	conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pyyaml requests setuptools six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
+	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
+	[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six onnx protobuf libprotobuf  # For TensorRT
+	conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pyyaml requests six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
 	[[ -n "$CFG_TORCHVISION_TAG" ]] && conda install $CFG_AUTO_YES typing_extensions numpy requests scipy scikit-learn-intelex  # For Torchvision
 	[[ -n "$CFG_TORCHAUDIO_TAG" ]] && conda install $CFG_AUTO_YES numpy scipy scikit-learn-intelex kaldi_io  # For Torchaudio
 	[[ -n "$CFG_TORCHTEXT_TAG" ]] && conda install $CFG_AUTO_YES tqdm numpy requests nltk spacy sacremoses  # For Torchtext
 	conda install $CFG_AUTO_YES decorator appdirs mako numpy six platformdirs  # For pip packages
 	conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
+	conda install $CFG_AUTO_YES setuptools==58.0.4
 	CERES_EIGEN_VERSION="$(grep -oP '(?<=set\(CERES_EIGEN_VERSION)\s+[0-9.]+\s*(?=\))' "$CONDA_ENV_DIR/lib/cmake/Ceres/CeresConfig.cmake")"
 	CERES_EIGEN_VERSION="${CERES_EIGEN_VERSION// /}"
 	if [[ -n "$CERES_EIGEN_VERSION" ]]; then
