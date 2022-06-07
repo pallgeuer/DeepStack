@@ -127,9 +127,28 @@ Downloads](https://www.nvidia.com/Download/Find.aspx?lang=en-us). If, for
 example, this reveals that you want to install the latest available driver of
 version 510, you would check what is available in the Ubuntu universe using:
 ```
+aptitude search nvidia-driver-
 apt-cache policy nvidia-driver-510
 ```
-If you like the listed installation candidate, then:
+You can optionally get access to more NVIDIA driver versions using the NVIDIA 
+network repo:
+```
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb
+sudo dpkg -i cuda-keyring_1.0-1_all.deb
+sudo apt update
+```
+You may be prompted to remove a deprecated public CUDA GPG key, like for 
+example:
+```
+sudo apt-key del 7fa2af80
+```
+Now you can check again what NVIDIA driver versions you have available:
+```
+aptitude search nvidia-driver-
+apt-cache policy nvidia-driver-510
+```
+Once you have chosen which NVIDIA driver package you want to install, e.g. 
+`nvidia-driver-510`, do:
 ```
 sudo apt install build-essential
 sudo apt install nvidia-driver-510
@@ -140,7 +159,7 @@ interface is suddenly buggy or crashes. To avoid this, it is recommended to mark
 *all* of the NVIDIA packages that were just installed as part of
 `nvidia-driver-510` as 'on hold' (i.e. frozen):
 ```
-sudo apt-mark hold PACKAGES JUST INSTALLED
+sudo apt-mark hold NVIDIA PACKAGES THAT WERE JUST INSTALLED
 apt-mark showhold
 ```
 The list of packages just installed should be quite similar to the list provided
