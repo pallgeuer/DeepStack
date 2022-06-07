@@ -24,7 +24,7 @@ component versions:
 
  * **Ubuntu:** 18.04, 20.04 (x86_64)
  * **Conda:** 4.8.2 to 4.12.0
- * **NVIDIA driver:** 470 to 510
+ * **NVIDIA driver:** 470 to 515
  * **Python:** 3.6 to 3.9
  * **CUDA:** 10.1 to 11.6
  * **cuDNN:** 7.6.5 to 8.4.0
@@ -147,7 +147,7 @@ The list of packages just installed should be quite similar to the list provided
 in the uninstall instructions above, just with different version numbers. You
 cannot rely on this however being the case. As a check:
 ```
-dpkg -l | egrep -i '(nvidia|390|418|430|435|440|450|455|460|465|470|495|510)|(^h)'
+dpkg -l | egrep -i '(nvidia|390|418|430|435|440|450|455|460|465|470|495|510|515)|(^h)'
 ```
 If there is `hi` at the beginning of a line then the corresponding package is
 installed and on hold. Otherwise `ii` just means installed.
