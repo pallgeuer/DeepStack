@@ -203,7 +203,7 @@ if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
 		echo
 	done
 fi
-if [[ -z "$(find -H "$CUDA_INSTALL_DIR/lib64" -type f -name "libcudnn*")" ]]; then
+if [[ -z "$(find -H "$CUDA_INSTALL_DIR/lib64" -type f -name "libcudnn*" 2>/dev/null)" ]]; then
 	echo "Downloading cuDNN $CFG_CUDNN_VERSION..."
 	if [[ ! -f "$CUDNN_TAR" ]]; then
 		echo "Please log in with your NVIDIA account and don't close the browser..."
@@ -288,7 +288,7 @@ if [[ ! -d "$LOCAL_CUDA_DIR" ]]; then
 		sudo rm -rf /var/log/cuda-installer.log
 		sudo sh "$CUDA_PATCH_RUNFILE" --toolkit --toolkitpath="$CUDA_INSTALL_DIR" "${CUDA_SAMPLES_CMDS[@]}" --librarypath="$LOCAL_CUDA_SYSTEM_DIR" --no-man-page --override
 		echo
-		echo "You can ignore the PATH / LD_LIBRARY_PATH advice above, and not worry about 'Incomplete installation"'!'"' as we already have our own NVIDIA driver installed"
+		echo -e "\033[1;32mYou can ignore the PATH / LD_LIBRARY_PATH advice above, and not worry about 'Incomplete installation"'!'"' as you should already have manually installed your own NVIDIA driver (see README.md)\033[0m"
 		echo
 		echo "Checking the installation log for anything suspicious..."
 		echo -en "\033[0;33m"
