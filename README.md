@@ -68,7 +68,7 @@ NVIDIA driver is currently installed before continuing. It happens by accident
 more often than you think, and can be fatal for the driver working. So first
 check what is installed:
 ```
-dpkg -l | egrep -i 'nvidia|390|418|430|435|440|450|455|460|465|470|495|510'
+dpkg -l | egrep -i 'nvidia|390|418|430|435|440|450|455|460|465|470|495|510|515'
 ```
 The numbers being searched for are Linux AMD64 NVIDIA driver version numbers.
 This is needed because not all packages that are part of the driver have
