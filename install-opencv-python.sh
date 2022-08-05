@@ -360,7 +360,7 @@ if [[ ! -f "$OPENCV_PYTHON_COMPILED" ]] && find "$OPENCV_PYTHON_GIT_DIR" -maxdep
 		export ENABLE_CONTRIB="$CFG_OPENCV_CONTRIB"
 		export ENABLE_HEADLESS="$CFG_OPENCV_HEADLESS"
 		export MAKEFLAGS="-j$(nproc)"
-		time pip wheel --verbose --use-feature=in-tree-build .
+		time pip wheel --verbose .
 	)
 fi
 echo
@@ -418,7 +418,7 @@ setup(
 )
 EOM
 			cd "$OPENCV_PYTHON_STUB_DIR"
-			pip wheel --verbose --use-feature=in-tree-build .
+			pip wheel --verbose .
 		)
 	fi
 	echo

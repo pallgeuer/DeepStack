@@ -862,7 +862,7 @@ setup(
 )
 EOM
 			cd "$OPENCV_PYTHON_STUB_DIR"
-			pip wheel --verbose --use-feature=in-tree-build .
+			pip wheel --verbose .
 		)
 	fi
 	echo
