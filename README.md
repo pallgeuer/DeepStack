@@ -22,18 +22,18 @@ better than others due to library dependencies and cross-compatibilities. This
 repository has so far been *tested* on selected combinations of the following
 component versions:
 
- * **Ubuntu:** 18.04, 20.04 (x86_64)
- * **Conda:** 4.8.2 to 4.12.0
+ * **Ubuntu:** 18.04, 20.04, 22.04 (x86_64)
+ * **Conda:** 4.8.2 to 4.13.0
  * **NVIDIA driver:** 470 to 515
- * **Python:** 3.6 to 3.9
- * **CUDA:** 10.1 to 11.6
- * **cuDNN:** 7.6.5 to 8.4.0
+ * **Python:** 3.6 to 3.10
+ * **CUDA:** 10.1 to 11.7
+ * **cuDNN:** 7.6.5 to 8.4.1
  * **OpenCV:** 3.4.17 to 4.5.5
- * **TensorRT:** 6.0.1 to 8.2.4
- * **PyTorch:** 1.8.2 to 1.11.0
- * **Torchvision:** 0.9.2 to 0.12.0
- * **Torchaudio:** 0.8.2 to 0.11.0
- * **Torchtext:** 0.9.2 to 0.12.0
+ * **TensorRT:** 6.0.1 to 8.4.2
+ * **PyTorch:** 1.8.2 to 1.12.0
+ * **Torchvision:** 0.9.2 to 0.13.0
+ * **Torchaudio:** 0.8.2 to 0.12.0
+ * **Torchtext:** 0.9.2 to 0.13.0
 
 As stated however, PyTorch versions prior to 1.8.2 LTS can *likely* be built
 with this repository, it just hasn't been tested yet.
@@ -130,14 +130,14 @@ version 510, you would check what is available in the Ubuntu universe using:
 aptitude search nvidia-driver-
 apt-cache policy nvidia-driver-510
 ```
-You can optionally get access to more NVIDIA driver versions using the NVIDIA 
+You can optionally get access to more NVIDIA driver versions using the NVIDIA
 network repo:
 ```
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb
 sudo dpkg -i cuda-keyring_1.0-1_all.deb
 sudo apt update
 ```
-You may be prompted to remove a deprecated public CUDA GPG key, like for 
+You may be prompted to remove a deprecated public CUDA GPG key, like for
 example:
 ```
 sudo apt-key del 7fa2af80
@@ -147,7 +147,7 @@ Now you can check again what NVIDIA driver versions you have available:
 aptitude search nvidia-driver-
 apt-cache policy nvidia-driver-510
 ```
-Once you have chosen which NVIDIA driver package you want to install, e.g. 
+Once you have chosen which NVIDIA driver package you want to install, e.g.
 `nvidia-driver-510`, do:
 ```
 sudo apt install build-essential
@@ -274,15 +274,15 @@ existing installation of CUDA 11.3:
 CFG_CONDA_ENV=pytch ./install-pytorch-1.10.2-cuda-11.3.sh
 ```
 And this installs PyTorch 1.8.2 LTS along with TensorRT 6.0.1 into the new conda
-environment `trt` based on an existing installation of CUDA 10.1:
+environment `trt` based on an existing installation of CUDA 10.2:
 ```
-CFG_CONDA_ENV=trt ./install-pytorch-1.8.2-cuda-10.1-trt-6.0.1.sh
+CFG_CONDA_ENV=trt ./install-pytorch-1.8.2-cuda-10.2-trt-6.0.1.sh
 ```
-The following installs PyTorch 1.10.2 along with TensorRT 8.2.4 into the new
+The following installs PyTorch 1.10.2 along with TensorRT 8.2.5 into the new
 conda environment `myproj` based on an existing installation of CUDA 11.3, but
 does not explicitly compile TensorRT into PyTorch:
 ```
-CFG_CONDA_ENV=myproj ./install-pytorch-1.10.2-cuda-11.3-trtext-8.2.4.sh
+CFG_CONDA_ENV=myproj ./install-pytorch-1.10.2-cuda-11.3-trtext-8.2.5.sh
 ```
 This may be useful in order to side-step compatibility issues, and does not
 prevent you from exporting PyTorch models to TensorRT via ONNX as normal. For
@@ -314,26 +314,26 @@ If you see something similar to the following error while running an installer:
 ```
 c++: fatal error: Killed signal terminated program cc1plus
 ```
-or notice the computer graphics slow down, or otherwise notice that the 
-installation process uses too much RAM, then you can reduce the RAM usage by 
-setting a maximum number of parallel compilation jobs (`MAX_JOBS`) less than the 
-number of virtual CPU cores on your machine (check `nproc`). For instance, on a 
-hyper-threaded machine with 8 physical cores, `nproc` will show 16 virtual cores 
-(often referred to as logical cores or 'threads'), so by default up to 16 
-compilation jobs will be run in parallel at any one time. If this is too much 
-for the amount of available RAM, then you can for example allow only up to 10 
+or notice the computer graphics slow down, or otherwise notice that the
+installation process uses too much RAM, then you can reduce the RAM usage by
+setting a maximum number of parallel compilation jobs (`MAX_JOBS`) less than the
+number of virtual CPU cores on your machine (check `nproc`). For instance, on a
+hyper-threaded machine with 8 physical cores, `nproc` will show 16 virtual cores
+(often referred to as logical cores or 'threads'), so by default up to 16
+compilation jobs will be run in parallel at any one time. If this is too much
+for the amount of available RAM, then you can for example allow only up to 10
 compilation jobs in parallel using something like:
 ```
 MAX_JOBS=10 CFG_CONDA_ENV=pytch ./install-pytorch-1.10.2-cuda-11.3.sh
 ```
-It is also advantageous in general if your system has swap activated so that 
-temporary bursts in memory requirements do not have the ability to immediately 
-cause compilation termination, or more serious problems like possible system 
+It is also advantageous in general if your system has swap activated so that
+temporary bursts in memory requirements do not have the ability to immediately
+cause compilation termination, or more serious problems like possible system
 crashes.
 
-If you have issues executing the installer scripts because of denied 
-permissions, check that all the scripts in the main directory are executable 
-(have the 'x' permission bit set). If not, you can fix the situation using 
+If you have issues executing the installer scripts because of denied
+permissions, check that all the scripts in the main directory are executable
+(have the 'x' permission bit set). If not, you can fix the situation using
 `chmod +x *.sh`.
 
 When running an installer script, subdirectories are (at times temporarily)
