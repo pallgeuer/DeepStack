@@ -719,7 +719,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	set +u
 	conda config --env --append channels conda-forge
 	conda config --env --append channels pytorch
-	conda config --env --set channel_priority strict
+	conda config --env --set channel_priority flexible
 	conda install $CFG_AUTO_YES cython
 	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
 	[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six onnx protobuf libprotobuf  # For TensorRT
@@ -733,7 +733,6 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	CERES_EIGEN_VERSION="$(grep -oP '(?<=set\(CERES_EIGEN_VERSION)\s+[0-9.]+\s*(?=\))' "$CONDA_ENV_DIR/lib/cmake/Ceres/CeresConfig.cmake")"
 	CERES_EIGEN_VERSION="${CERES_EIGEN_VERSION// /}"
 	if [[ -n "$CERES_EIGEN_VERSION" ]]; then
-		conda config --env --set channel_priority flexible
 		conda install $CFG_AUTO_YES eigen="$CERES_EIGEN_VERSION"
 	else
 		echo "Failed to parse Eigen version required by Ceres"
