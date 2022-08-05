@@ -5,44 +5,68 @@ Default installer scripts:
 
 - Look if README.md should be changed if you update anything! (Version numbers as well as example scripts in the how-to)
 
+- Worry about:
+	- nvidia-fs kernel objects and how to most appropriately install them (come in the CUDA 11.7+ runfiles but are by default disabled)
+	- Channel priority is now flexible by default to avoid unnecessary conda failure, even though this results in more packages ending up from non-default channels than strictly needed
+	- setuptools is fixed at 58.0.4 due to fundamental changes that happened beyond that at some point (removal of distutils?) => This is okay for now, but far into the future a better solution is desired
+	- Eventually conda packages will be too new for the older PyTorch/etc library versions, so need to save conda environment package versions that definitely worked
+	- OpenCV 4.6.0+ requires ceres-solver>2.1.0, but this is not available over conda yet, and OpenCV 4.5.5 requires ceres-solver<=2.1.0
+
 - https://developer.nvidia.com/cuda-toolkit-archive
+	- If a patch for CUDA 10.2 newer than 10.2.2 is released then update install-cuda-10.2-cudnn-7.6.5.sh
 	- If a version of CUDA 11.4 newer than 11.4.4 is released then update install-cuda-11.4-cudnn-8.3.2.sh
 	- If a version of CUDA 11.5 newer than 11.5.2 is released then update install-cuda-11.5-cudnn-8.3.2.sh
-	- If a version of CUDA 11.6 newer than 11.6.2 is released then update install-cuda-11.6-cudnn-8.4.0.sh
-	- If a version of CUDA 11.7 or newer is released then add it
+	- If a version of CUDA 11.6 newer than 11.6.2 is released then update install-cuda-11.6-cudnn-8.4.1.sh
+	- If a version of CUDA 11.7 newer than 11.7.1 is released then update install-cuda-11.7-cudnn-8.4.1.sh
+	- If a version of CUDA 11.8 or newer is released then add it
 
 - https://github.com/NVIDIA/cuda-samples/releases
 	- If a version of CUDA 11.4 samples newer than 11.4.1 is released then update install-cuda-11.4-cudnn-8.3.2.sh
 	- If a version of CUDA 11.5 samples newer than 11.5 is released then update install-cuda-11.5-cudnn-8.3.2.sh
-	- If a version of CUDA 11.6 samples newer than 11.6 is released then update install-cuda-11.6-cudnn-8.4.0.sh
+	- If a version of CUDA 11.6 samples newer than 11.6 is released then update install-cuda-11.6-cudnn-8.4.1.sh
+	- If a version of CUDA 11.7 samples newer than 11.6 (not a typo) is released then update install-cuda-11.7-cudnn-8.4.1.sh
+
+- https://docs.nvidia.com/deeplearning/cudnn/archives/index.html (-> Support Matrix)
+	- Which cuDNN version to associate with which CUDA version is determined by which cuDNN/CUDA version pairings are explicitly targeted by TensorRT releases (see below)
 
 - https://docs.nvidia.com/deeplearning/tensorrt/archives/index.html (-> Support Matrix)
-	- If some cuDNN 8.3.X becomes the targeted cuDNN for some non-EA TensorRT 8.4.Y then update install-cuda-11.4-cudnn-8.3.2.sh and install-cuda-11.5-cudnn-8.3.2.sh (if there is more than one such (X,Y) pair, then use the first with 11.4 and second with 11.5)
-	- If some cuDNN 8.4.X becomes the targeted cuDNN for some non-EA TensorRT >=8.4 then update install-cuda-11.6-cudnn-8.4.0.sh
-	- If a version of TensorRT >8.2.4 is released that targets cuDNN 8.2.1 and CUDA 11.3 then update install-pytorch-1.10.2-cuda-11.3-trtext-8.2.4.sh and install-pytorch-1.11.0-cuda-11.3-trtext-8.2.4.sh
+	- BE CAREFUL WITH CAPITALISATION OF "TensorRT" AND "Linux" IN THE TENSORRT URLS (should be capitalised)
+	- SET CFG_TENSORRT_ONNX_TAG AS DESCRIBED IN THE NEXT PARAGRAPH
+	- SET CFG_TENSORRT_PYTORCH BASED ON ATTEMPTING INSTALLATION WITH IT COMMENTED OUT FIRST (DEFAULT: 1)
+	- If a version of TensorRT 8.2.X > 8.2.5 is released that targets cuDNN 8.2.1 and CUDA 11.3 then update the TensorRT version in install-pytorch-1.10.2-cuda-11.3-trtext-8.2.5.sh and install-pytorch-1.11.0-cuda-11.3-trtext-8.2.5.sh
+	- If some cuDNN 8.4.X > 8.4.1 becomes the targeted cuDNN for some non-EA TensorRT >=8.4 then update the cuDNN version in install-cuda-11.6-cudnn-8.4.1.sh and install-cuda-11.7-cudnn-8.4.1.sh, and update the TensorRT version in install-pytorch-1.12.0-cuda-11.6-trtext-8.4.2.sh
+	- If some cuDNN >=8.5 becomes the targeted cuDNN for some non-EA TensorRT >=8.5 then use that cuDNN version for CUDA 11.8+
 
 - https://github.com/onnx/onnx-tensorrt/tags
-	- If a version of onnx-tensorrt newer than 22.02 is released that explicitly supports the version of TensorRT 8.2.4+ associated with CUDA 11.3 then update install-pytorch-1.10.2-cuda-11.3-trtext-8.2.4.sh and install-pytorch-1.11.0-cuda-11.3-trtext-8.2.4.sh
+	- If a version of onnx-tensorrt newer than f42daeee49f2517a954c5601f0f76bef9ed94b62 (current head of origin/8.2-GA branch) is released that explicitly supports TensorRT 8.2.3+ then update install-pytorch-1.10.2-cuda-11.3-trtext-8.2.5.sh and install-pytorch-1.11.0-cuda-11.3-trtext-8.2.5.sh
+	- If a version of onnx-tensorrt newer than c3cfcbc8248c6bd007e6630af2085df5e4834b42 (one commit after release/8.4-GA) is released that explicitly supports TensorRT 8.4.1+ then update install-pytorch-1.12.0-cuda-11.6-trtext-8.4.2.sh
 
 - https://github.com/opencv/opencv-python/releases
-	- If the opencv-python GitHub releases a tag newer than 63 for OpenCV 3 then update install-opencv-python-3.4.17-cuda-10.1.sh
-	- If the opencv-python GitHub releases a tag newer than 64 for OpenCV 4 then update install-opencv-python-4.5.5-cuda-10.2.sh
-
-- https://pytorch.org/get-started/locally
-	- If a version of PyTorch 1.11 newer than 1.11.0 is released then update install-pytorch-1.11.0-cuda-*.sh (also check if CUDA 11.4+ is supported by it [also conda search -c pytorch magma-cuda*] and update CUDA/TensorRT/ONNX-TensorRT if so)
-	- If a version of PyTorch 1.12 or newer is released then add it
-	- If a new version of PyTorch is released then check whether it explicitly supports TensorRT 8 yet, and update if so
+	- If the opencv-python GitHub releases a tag newer than 65 for OpenCV 3 then update install-opencv-python-3.4.18-cuda-10.1.sh
+	- If the opencv-python GitHub releases a tag newer than 66 for OpenCV 4 then update install-opencv-python-4.5.5-cuda-10.2.sh and install-opencv-python-4.5.5-cuda-11.6.sh
+	- If the selected OpenCV 4 version supports Python 3.11 then update install-opencv-python-4.5.5-cuda-11.6.sh
+	- If OpenCV 5 is released then add it
 
 - https://github.com/opencv/opencv/tags
-	- If a version of OpenCV newer than 4.5.5 is released then update install-pytorch-1.11.0-cuda-*.sh
+	- If a version of OpenCV newer than 4.5.5 is released then update install-pytorch-1.11.0-cuda-*.sh and install-pytorch-1.12.0-cuda-*.sh (ONLY if ceres-solver>2.1.0 is available via conda)
 
-- If PyTorch, Torchvision, Torchaudio, Torchtext, TensorRT, OpenCV all support Python 3.10 then update:
+- https://pytorch.org/get-started/locally (also: conda search -c pytorch magma-cuda*)
+	- If a version of PyTorch 1.11 newer than 1.11.0 is released then update install-pytorch-1.11.0-cuda-*.sh
+	- If a version of PyTorch 1.12 newer than 1.12.0 is released then update install-pytorch-1.12.0-cuda-*.sh
+	- If a version of PyTorch 1.13 or newer is released then add it
+	- If a new version of PyTorch is released then check whether it explicitly supports TensorRT 8 yet, and update if so
+
+- If PyTorch, Torchvision, Torchaudio, Torchtext, TensorRT, OpenCV all support Python 3.11 then update wherever you can:
 	- https://github.com/pytorch/vision#installation
 	- https://github.com/pytorch/audio#dependencies
 	- https://github.com/pytorch/text#installation
 	- https://docs.nvidia.com/deeplearning/tensorrt/archives/index.html -> Support Matrix -> Ctrl+F "Python wheel"
-	- conda search -c conda-forge opencv | grep py310
-	- conda search -c pytorch pytorch | egrep 'py3\.?10'
+	- conda search -c conda-forge opencv | grep py311
+	- conda search -c pytorch pytorch | egrep 'py3\.?11'
+
+- Look if README.md should be changed if you update anything! (Version numbers as well as example scripts in the how-to)
+
+- Test installing all installers (conda changes can cause failures!)
 
 Further links:
 
@@ -56,6 +80,7 @@ You can test all CUDA installers using:
 	# Give console infinite scrollback
 	cd ~/Programs/DeepStack
 	installers=(install-cuda-*.sh); for installer in "${installers[@]}"; do echo; echo "RUNNING INSTALLER: $installer"; if CFG_CLEAN_INSTALLERS=0 ./"$installer"; then notify-send -a Konsole -h string:desktop-entry:org.kde.konsole SUCCESS "Successfully installed: $installer"; else notify-send -a Konsole -h string:desktop-entry:org.kde.konsole FAILURE "FAILED TO INSTALL: $installer"; fi; done
+	# NOTE: Use "${installers[@]:3}" for example to skip the first 3 installers
 	# UNDO: Rename Installers to InstallersOLD if you want to keep them
 	# UNDO: for uninstaller in Uninstallers/uninstall-cuda-*.sh; do "$uninstaller"; done
 	# UNDO: Rename InstallersOLD back to Installers if necessary
