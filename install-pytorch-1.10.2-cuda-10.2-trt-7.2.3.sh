@@ -5,7 +5,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Configuration
-export CFG_CUDA_VERSION=11.1
+export CFG_CUDA_VERSION=10.2
 export CFG_PYTORCH_TAG=v1.10.2
 export CFG_TORCHVISION_TAG=v0.11.3
 export CFG_TORCHAUDIO_TAG=v0.10.2
