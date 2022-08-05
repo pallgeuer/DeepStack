@@ -10,7 +10,7 @@ Default installer scripts:
 	- Channel priority is now flexible by default to avoid unnecessary conda failure, even though this results in more packages ending up from non-default channels than strictly needed
 	- setuptools is fixed at 58.0.4 due to fundamental changes that happened beyond that at some point (removal of distutils?) => This is okay for now, but far into the future a better solution is desired
 	- Eventually conda packages will be too new for the older PyTorch/etc library versions, so need to save conda environment package versions that definitely worked
-	- OpenCV 4.6.0+ requires ceres-solver>2.1.0, but this is not available over conda yet, and OpenCV 4.5.5 requires ceres-solver<=2.1.0
+	- OpenCV 3.4.18+ and 4.6.0+ requires ceres-solver>2.1.0 (strictly greater), but this is not available over conda yet, and OpenCV <=3.4.17 and <=4.5.5 requires ceres-solver<=2.1.0. Thus, will the existing compilation of OpenCV suddenly break when a newer ceres-solver is released?
 
 - https://developer.nvidia.com/cuda-toolkit-archive
 	- If a patch for CUDA 10.2 newer than 10.2.2 is released then update install-cuda-10.2-cudnn-7.6.5.sh

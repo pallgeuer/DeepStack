@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Configuration
 export CFG_CUDA_VERSION=10.2
-export CFG_OPENCV_PYTHON_TAG=65  # Corresponds to 3.4.18
+export CFG_OPENCV_PYTHON_TAG=63  # Corresponds to 3.4.17
 export CFG_CONDA_PYTHON=3.9
 
 # Run the main installation script
