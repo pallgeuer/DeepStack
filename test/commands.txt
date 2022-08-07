@@ -66,7 +66,7 @@ Default installer scripts:
 
 - Look if README.md should be changed if you update anything! (Version numbers as well as example scripts in the how-to)
 
-- Test installing all installers (conda changes can cause failures!)
+- Test installing all installers (conda changes can cause failures!) => CUDA + OpenCV Python + PyTorch
 
 Further links:
 
@@ -84,6 +84,14 @@ You can test all CUDA installers using:
 	# UNDO: Rename Installers to InstallersOLD if you want to keep them
 	# UNDO: for uninstaller in Uninstallers/uninstall-cuda-*.sh; do "$uninstaller"; done
 	# UNDO: Rename InstallersOLD back to Installers if necessary
+
+You can test all OpenCV Python installers using:
+	# Ensure all required CUDA versions are installed
+	# Make sure no clashing installations already present
+	# Give console infinite scrollback
+	cd ~/Programs/DeepStack
+	installers=(install-opencv-python-*.sh); CFG_STAGE=-1 ./"${installers[0]}"; for installer in "${installers[@]}"; do echo; echo "RUNNING INSTALLER: $installer"; if CFG_ALLOW_SUDO=0 CFG_CLEAN_WORKDIR=0 CFG_CLEAN_CONDA=0 ./"$installer"; then notify-send -a Konsole -h string:desktop-entry:org.kde.konsole SUCCESS "Successfully installed: $installer"; else notify-send -a Konsole -h string:desktop-entry:org.kde.konsole FAILURE "FAILED TO INSTALL: $installer"; fi; done; conda clean -y --all
+	# UNDO: for uninstaller in Uninstallers/uninstall-opencv-*.sh; do "$uninstaller"; done
 
 You can test all PyTorch installers using:
 	# Ensure all required CUDA versions are installed

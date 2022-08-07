@@ -32,6 +32,9 @@ CFG_STAGE="${CFG_STAGE:-0}"
 # Whether to have faith and auto-answer all prompts
 CFG_AUTO_ANSWER="${CFG_AUTO_ANSWER:-1}"
 
+# Whether to allow/execute commands that require sudo
+CFG_ALLOW_SUDO="${CFG_ALLOW_SUDO:-1}"
+
 # Root directory to use for downloading and compiling libraries and storing files in the process of installation
 CFG_ROOT_DIR="${CFG_ROOT_DIR:-$SCRIPT_DIR}"
 
@@ -65,13 +68,14 @@ CFG_CLEAN_CONDA="${CFG_CLEAN_CONDA:-1}"
 cd "$CFG_ROOT_DIR"
 
 # Clean up configuration variables
-[[ "$CFG_STAGE" -le 0 ]] 2>/dev/null && CFG_STAGE=0
+[[ "$CFG_STAGE" -lt -1 ]] 2>/dev/null && CFG_STAGE=0
 if [[ "$CFG_AUTO_ANSWER" == "1" ]]; then
 	CFG_AUTO_YES=-y
 else
 	CFG_AUTO_ANSWER="0"
 	CFG_AUTO_YES=
 fi
+[[ "$CFG_ALLOW_SUDO" != "1" ]] && CFG_ALLOW_SUDO="0"
 CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
 CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
@@ -86,6 +90,7 @@ CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 echo
 echo "CFG_STAGE = $CFG_STAGE"
 echo "CFG_AUTO_ANSWER = $CFG_AUTO_ANSWER"
+echo "CFG_ALLOW_SUDO = $CFG_ALLOW_SUDO"
 echo "CFG_ROOT_DIR = $CFG_ROOT_DIR"
 echo "CFG_CUDA_VERSION = $CFG_CUDA_VERSION"
 echo "CFG_CUDA_NAME = $CFG_CUDA_NAME"
@@ -113,6 +118,21 @@ fi
 # Signal that the script is starting
 echo "Starting OpenCV python installation..."
 echo
+
+# Install system dependencies
+echo "Installing various system dependencies..."
+if [[ "$CFG_ALLOW_SUDO" == "1" ]]; then
+	sudo apt install $CFG_AUTO_YES libnuma-dev
+	sudo apt install $CFG_AUTO_YES libva-dev libtbb-dev
+	sudo apt install $CFG_AUTO_YES v4l-utils libv4l-dev
+	sudo apt install $CFG_AUTO_YES openmpi-bin libopenmpi-dev
+	sudo apt install $CFG_AUTO_YES libglu1-mesa libglu1-mesa-dev freeglut3-dev libglfw3 libglfw3-dev libgl1-mesa-glx
+	sudo apt install $CFG_AUTO_YES qt5-default
+fi
+echo
+
+# Stop if stage limit reached
+[[ "$CFG_STAGE" -eq -1 ]] && exit 0
 
 # Initialise uninstaller script
 UNINSTALLERS_DIR="$CFG_ROOT_DIR/Uninstallers"
@@ -142,16 +162,6 @@ function add_uninstall_cmds()
 	UNINSTALLER_CONTENTS=$'\n'"$1"$'\n'"$UNINSTALLER_CONTENTS"
 	echo "$UNINSTALLER_HEADER"$'\n'"$UNINSTALLER_CONTENTS" > "$UNINSTALLER_SCRIPT"
 }
-echo
-
-# Install system dependencies
-echo "Installing various system dependencies..."
-sudo apt install $CFG_AUTO_YES libnuma-dev
-sudo apt install $CFG_AUTO_YES libva-dev libtbb-dev
-sudo apt install $CFG_AUTO_YES v4l-utils libv4l-dev
-sudo apt install $CFG_AUTO_YES openmpi-bin libopenmpi-dev
-sudo apt install $CFG_AUTO_YES libglu1-mesa libglu1-mesa-dev freeglut3-dev libglfw3 libglfw3-dev libgl1-mesa-glx
-sudo apt install $CFG_AUTO_YES qt5-default
 echo
 
 #
@@ -192,6 +202,8 @@ if [[ ! -f "$OPENCV_PYTHON_COMPILED" ]] && [[ ! -d "$OPENCV_PYTHON_GIT_DIR" ]]; 
 		git submodule sync
 		git submodule update --init --recursive
 		git submodule status
+		[[ -f "$OPENCV_PYTHON_GIT_DIR/pyproject.toml" ]] && sed -i 's/"setuptools", "wheel", "scikit-build", "cmake"/"setuptools==59.2.0", "wheel==0.37.0", "cmake>=3.1", "scikit-build>=0.13.2"/g' "$OPENCV_PYTHON_GIT_DIR/pyproject.toml"
+		[[ -f "$OPENCV_PYTHON_GIT_DIR/setup.py" ]] && sed -i 's/ cmake_install_dir=cmake_install_reldir,/ _cmake_install_dir=cmake_install_reldir,/g' "$OPENCV_PYTHON_GIT_DIR/setup.py"
 	)
 fi
 echo

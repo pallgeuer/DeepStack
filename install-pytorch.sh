@@ -323,6 +323,7 @@ if [[ ! -f "$PYTORCH_COMPILED" ]] && [[ ! -d "$PYTORCH_GIT_DIR" ]]; then
 		git submodule status
 		[[ -f "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc" ]] && sed -i 's/TORCH_WARN("Leaking Caffe2 thread-pool after fork.");/;/g' "$PYTORCH_GIT_DIR/caffe2/utils/threadpool/pthreadpool-cpp.cc"
 		[[ -f "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py" ]] && sed -i "s|additional_options = {|&'pybind11_PREFER_third_party': 'pybind11_PREFER_third_party',|" "$PYTORCH_GIT_DIR/tools/setup_helpers/cmake.py"
+		[[ -f "$PYTORCH_GIT_DIR/caffe2/proto/CMakeLists.txt" ]] && sed -i 's|"\${CMAKE_CURRENT_SOURCE_DIR}/torch.proto;${CMAKE_CURRENT_SOURCE_DIR}/caffe2.proto|&;${CMAKE_CURRENT_SOURCE_DIR}/metanet.proto|g' "$PYTORCH_GIT_DIR/caffe2/proto/CMakeLists.txt"
 		if [[ -f "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" ]]; then
 			grep -Fq '${CMAKE_CURRENT_SOURCE_DIR}/../modules' "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" && ! grep -Fq 'target_include_directories(convert_and_benchmark ' "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" && patch -s -u -f -F 0 -N -r - --no-backup-if-mismatch "$PYTORCH_GIT_DIR/binaries/CMakeLists.txt" >/dev/null << 'EOM' || true
 @@ -109,2 +109,3 @@
@@ -977,7 +978,6 @@ EOM
 			echo "Checking PyTorch TensorRT is available in python..."
 			python - << EOM
 from caffe2.python import workspace
-from caffe2.python.trt.transform import convert_onnx_model_to_trt_op, transform_caffe2_net
 if workspace.C.use_trt:
 	print("TensorRT is supported within PyTorch/Caffe2")
 else:
