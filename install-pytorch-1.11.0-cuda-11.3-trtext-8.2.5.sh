@@ -15,6 +15,7 @@ export CFG_OPENCV_TAG=4.5.5
 export CFG_TENSORRT_VERSION=8.2.5
 export CFG_TENSORRT_URL='https://developer.nvidia.com/compute/machine-learning/tensorrt/secure/8.2.5.1/tars/TensorRT-8.2.5.1.Linux.x86_64-gnu.cuda-11.4.cudnn8.2.tar.gz'
 export CFG_TENSORRT_ONNX_TAG=f42daeee49f2517a954c5601f0f76bef9ed94b62  # Current head of origin/8.2-GA branch
+export CFG_TENSORRT_PYTORCH=0
 export CFG_CONDA_PYTHON=3.9
 
 # Run the main installation script
