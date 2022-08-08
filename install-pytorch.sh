@@ -100,7 +100,7 @@ CFG_CLEAN_CONDA="${CFG_CLEAN_CONDA:-1}"
 cd "$CFG_ROOT_DIR"
 
 # Clean up configuration variables
-[[ "$CFG_STAGE" -lt -1 ]] 2>/dev/null && CFG_STAGE=0
+[[ "$CFG_STAGE" -eq 0 ]] || [[ "$CFG_STAGE" -lt -1 ]] && CFG_STAGE=0
 if [[ "$CFG_AUTO_ANSWER" == "1" ]]; then
 	CFG_AUTO_YES=-y
 else
