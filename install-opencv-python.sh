@@ -55,7 +55,9 @@ CFG_OPENCV_CMAKE="${CFG_OPENCV_CMAKE:-}"
 
 # Name to use for the created conda environment
 CFG_CONDA_ENV="${CFG_CONDA_ENV:-opencv-$CFG_OPENCV_PYTHON_TAGV-$CFG_CUDA_NAME}"
-CFG_CONDA_CREATE="${CFG_CONDA_CREATE:-1}"  # Set this to anything other than "true" to not attempt environment creation (environment must already exist and be appropriately configured)
+CFG_CONDA_CREATE="${CFG_CONDA_CREATE:-1}"  # Set this to anything other than 1 to not attempt environment creation (environment must already exist and be appropriately configured)
+CFG_CONDA_LOAD="${CFG_CONDA_LOAD:-}"  # If the path to a conda yml/txt file is specified, create an environment based on this file instead of manually installing packages
+CFG_CONDA_SAVE="${CFG_CONDA_SAVE:-0}"  # Set this to 1 in order to save the base conda environment specifications to yml/txt files in the 'conda' subdirectory
 
 # Python version to use for the created conda environment (check compatibility based on python tags: https://pypi.org/project/opencv-python)
 # Example: CFG_CONDA_PYTHON=3.9
@@ -80,6 +82,7 @@ CFG_ROOT_DIR="$(pwd)"
 CFG_CUDA_LOCATION="${CFG_CUDA_LOCATION%/}"
 CUDA_INSTALL_DIR="$CFG_CUDA_LOCATION/$CFG_CUDA_NAME"
 [[ "$CFG_CONDA_CREATE" != "1" ]] && CFG_CONDA_CREATE="0"
+[[ "$CFG_CONDA_SAVE" != "0" ]] && CFG_CONDA_SAVE="1"
 [[ "$CFG_OPENCV_CONTRIB" != "1" ]] && CFG_OPENCV_CONTRIB="0"
 [[ "$CFG_OPENCV_HEADLESS" != "0" ]] && CFG_OPENCV_HEADLESS="1"
 [[ "$CFG_OPENCV_STRICT" != "1" ]] && CFG_OPENCV_STRICT="0"
@@ -101,6 +104,8 @@ echo "CFG_OPENCV_HEADLESS = $CFG_OPENCV_HEADLESS"
 echo "CFG_OPENCV_STRICT = $CFG_OPENCV_STRICT"
 echo "CFG_OPENCV_CMAKE = $CFG_OPENCV_CMAKE"
 echo "CFG_CONDA_CREATE = $CFG_CONDA_CREATE"
+echo "CFG_CONDA_LOAD = $CFG_CONDA_LOAD"
+echo "CFG_CONDA_SAVE = $CFG_CONDA_SAVE"
 echo "CFG_CONDA_ENV = $CFG_CONDA_ENV"
 echo "CFG_CONDA_PYTHON = $CFG_CONDA_PYTHON"
 echo "CFG_CLEAN_WORKDIR = $CFG_CLEAN_WORKDIR"
@@ -232,7 +237,11 @@ if [[ "$CFG_CONDA_CREATE" != "1" ]] || find "$(conda info --base)"/envs -mindept
 else
 	echo "If you want an existing conda environment to be used instead, then create and configure the environment and pass its name as CFG_CONDA_ENV and set CFG_CONDA_CREATE=0"
 	set +u
-	conda create $CFG_AUTO_YES -n "$CFG_CONDA_ENV" python="$CFG_CONDA_PYTHON"
+	if [[ -n "$CFG_CONDA_LOAD" ]]; then
+		conda create $CFG_AUTO_YES -n "$CFG_CONDA_ENV" --no-default-packages
+	else
+		conda create $CFG_AUTO_YES -n "$CFG_CONDA_ENV" python="$CFG_CONDA_PYTHON"
+	fi
 	set -u
 	CREATED_CONDA_ENV=true
 fi
@@ -293,17 +302,25 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	set +u
 	conda config --env --append channels conda-forge
 	conda config --env --set channel_priority flexible
-	conda install $CFG_AUTO_YES cython
-	conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig six snappy tbb tbb-devel tbb4py tifffile
-	conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
-	conda install $CFG_AUTO_YES setuptools==58.0.4
-	CERES_EIGEN_VERSION="$(grep -oP '(?<=set\(CERES_EIGEN_VERSION)\s+[0-9.]+\s*(?=\))' "$CONDA_ENV_DIR/lib/cmake/Ceres/CeresConfig.cmake")"
-	CERES_EIGEN_VERSION="${CERES_EIGEN_VERSION// /}"
-	if [[ -n "$CERES_EIGEN_VERSION" ]]; then
-		conda install $CFG_AUTO_YES eigen="$CERES_EIGEN_VERSION"
+	if [[ -n "$CFG_CONDA_LOAD" ]]; then
+		if [[ "$CFG_CONDA_LOAD" == *.txt ]]; then
+			conda install $CFG_AUTO_YES -n "$CFG_CONDA_ENV" --file "$CFG_CONDA_LOAD"
+		else
+			conda env update -n "$CFG_CONDA_ENV" --file "$CFG_CONDA_LOAD"
+		fi
 	else
-		echo "Failed to parse Eigen version required by Ceres"
-		exit 1
+		conda install $CFG_AUTO_YES cython
+		conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig six snappy tbb tbb-devel tbb4py tifffile
+		conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python|(open)?blas(-devel)?|)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
+		conda install $CFG_AUTO_YES setuptools==58.0.4
+		CERES_EIGEN_VERSION="$(grep -oP '(?<=set\(CERES_EIGEN_VERSION)\s+[0-9.]+\s*(?=\))' "$CONDA_ENV_DIR/lib/cmake/Ceres/CeresConfig.cmake")"
+		CERES_EIGEN_VERSION="${CERES_EIGEN_VERSION// /}"
+		if [[ -n "$CERES_EIGEN_VERSION" ]]; then
+			conda install $CFG_AUTO_YES eigen="$CERES_EIGEN_VERSION"
+		else
+			echo "Failed to parse Eigen version required by Ceres"
+			exit 1
+		fi
 	fi
 	set -u
 	[[ -f "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh" ]] && chmod +x "$CONDA_ENV_DIR/etc/conda/activate.d/libblas_mkl_activate.sh"
@@ -332,6 +349,22 @@ conda deactivate
 conda activate "$CFG_CONDA_ENV"
 set -u
 echo
+
+# Save the environment specifications to file
+if [[ "$CFG_CONDA_SAVE" != "0" ]]; then
+	PYTHON_SPEC="$(python -c 'import sys; print("py%d%d%d" % (sys.version_info.major, sys.version_info.minor, sys.version_info.micro))')"
+	DATE_SPEC="$(date '+%Y%m%d')"
+	CONDA_SPEC_DIR="$CFG_ROOT_DIR/conda"
+	CONDA_SPEC_YML="$CONDA_SPEC_DIR/conda-opencv-python-$PYTHON_SPEC-$DATE_SPEC.yml"
+	CONDA_SPEC_TXT="$CONDA_SPEC_DIR/conda-opencv-python-$PYTHON_SPEC-$DATE_SPEC-explicit.txt"
+	set +u
+	echo "Saving conda env to: $CONDA_SPEC_YML"
+	conda env export | grep -v "^prefix:" > "$CONDA_SPEC_YML"
+	echo "Saving conda env to: $CONDA_SPEC_TXT"
+	conda list --explicit > "$CONDA_SPEC_TXT"
+	set -u
+	echo
+fi
 
 # Stop if stage limit reached
 [[ "$CFG_STAGE" -eq 2 ]] && exit 0
