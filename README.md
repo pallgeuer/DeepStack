@@ -240,7 +240,7 @@ OpenCV, and optionally Torchvision, Torchaudio, Torchtext and TensorRT, into a
 conda environment.
 
 Each of these scripts have many required (and optional) configuration
-parameters, which are clearly documented in the Configuration section of the
+parameters, which are clearly documented in the `Configuration` section of the
 corresponding script source code. Note that you should *not* run multiple
 instances of the same script in parallel, as this could result in race
 conditions and errors.
@@ -280,7 +280,8 @@ CFG_CONDA_ENV=trt ./install-pytorch-1.8.2-cuda-10.2-trt-6.0.1.sh
 ```
 The following installs PyTorch 1.10.2 along with TensorRT 8.2.5 into the new
 conda environment `myproj` based on an existing installation of CUDA 11.3, but
-does not explicitly compile TensorRT into PyTorch:
+does not explicitly compile TensorRT into PyTorch (note that this explicit
+support of TensorRT is very minimal and buggy anyway):
 ```
 CFG_CONDA_ENV=myproj ./install-pytorch-1.10.2-cuda-11.3-trtext-8.2.5.sh
 ```
@@ -341,6 +342,8 @@ created within the main directory to store downloaded files, cloned
 repositories, compiled samples and more. As an overview, the created
 subdirectories are:
 
+ * `conda`: Store conda environment specifications that have been known to work.
+
  * `CUDA`: Stores CUDA samples, and is where they are temporarily compiled.
 
  * `envs`: Stores the cloned git repositories required for building the required
@@ -357,10 +360,33 @@ by the installer scripts that were run.
 As each installer script runs, it stores the actions required to undo each
 installation stage into a corresponding uninstaller script. If an installation
 stage fails, you can open the uninstaller script and use the listed commands in
-the corresponding paragaph to undo just the stage that failed. You can then
-re-run the entire installer script to try again (assuming you have changed
-something that makes you think it will work this time). This automatically skips
-already completed stages and keeps going where it left off.
+the corresponding paragaph to undo just the stage that failed. For example,
+```
+Uninstallers/uninstall-cuda-11.1.sh
+```
+or if you want to just uninstall all stages beyond stage 2 for instance,
+```
+KEEP_STAGE=2 Uninstallers/uninstall-cuda-11.1.sh
+```
+You can then re-run the entire installer script to try again (assuming you have
+changed something that makes you think it will work this time). This
+automatically skips already completed stages and keeps going where it left off.
+
+It can happen that updates to the packages available through conda channels
+cause compatibility and/or compilation issues for older PyTorch/OpenCV versions
+as time passes (e.g. `setuptools>=60` deprecated `distutils`). This library
+attempts to fix all of these issues whenever and wherever possible (at all
+costs), but at some point this may no longer be possible (or practical).
+Alternatively, one may **want** to construct an environment with older Python
+package versions anyway, in order to support older code. In either case, this is
+supported via the conda environment specification files located in the `conda`
+subdirectory. These can be generated using `CFG_CONDA_SAVE=1`, and can be used
+(much) later for a new PyTorch install using for example
+`CFG_CONDA_LOAD=conda/conda-pytorch-py3104-vat-20220808.yml`. If nothing else
+works, one can still manually create a conda environment with all the required
+constrained dependency versions, and use that for a new PyTorch install by
+specifying the environment name via `CFG_CONDA_ENV=myenv` and setting
+`CFG_CONDA_CREATE=0`.
 
 ## Future Work
 
