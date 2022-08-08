@@ -152,6 +152,10 @@ read -r -d '' UNINSTALLER_HEADER << EOM || true
 # Use bash strict mode
 set -xeuo pipefail
 unset HISTFILE
+
+# Process environment variables
+KEEP_STAGE="\${KEEP_STAGE:-0}"
+[[ "\$KEEP_STAGE" -le 0 ]] 2>/dev/null && KEEP_STAGE=0
 EOM
 read -r -d '' UNINSTALLER_CONTENTS << EOM || true
 # Remove this uninstaller script
@@ -182,6 +186,7 @@ OPENCV_PYTHON_COMPILED="$ENV_DIR/opencv-python-compiled"
 # Stage 1 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 1:
+[[ "\$KEEP_STAGE" -ge 1 ]] && exit 0
 rm -rf "$OPENCV_PYTHON_GIT_DIR"
 rmdir --ignore-fail-on-non-empty '$ENV_DIR' 2>/dev/null || true
 rmdir --ignore-fail-on-non-empty '$ENVS_DIR' 2>/dev/null || true
@@ -221,7 +226,7 @@ echo
 #
 
 # Stage 2 uninstall
-UNINSTALLER_COMMANDS="Commands to undo stage 2:"$'\n'"set +ux"
+UNINSTALLER_COMMANDS="Commands to undo stage 2:"$'\n''[[ "$KEEP_STAGE" -ge 2 ]] && exit 0'$'\n'"set +ux"
 [[ "$CFG_CONDA_CREATE" == "1" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda deactivate"$'\n'"conda env remove -n '$CFG_CONDA_ENV'"
 [[ "$CFG_CLEAN_CONDA" == "1" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda clean -y --all"
 UNINSTALLER_COMMANDS+=$'\n'"set -ux"
@@ -379,6 +384,7 @@ OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 # Stage 3 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
+[[ "\$KEEP_STAGE" -ge 3 ]] && exit 0
 set +ux
 if conda activate '$CFG_CONDA_ENV'; then INSTALLED_OPENCVS="\$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ' || true)"; [[ -n "\$INSTALLED_OPENCVS" ]] && pip uninstall -y \$INSTALLED_OPENCVS || true; fi
 set -ux
@@ -500,6 +506,7 @@ echo
 # Stage 4 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 4:
+[[ "\$KEEP_STAGE" -ge 4 ]] && exit 0
 rm -rf '$OPENCV_PYTHON_COMPILED'
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"

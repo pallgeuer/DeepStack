@@ -199,6 +199,10 @@ read -r -d '' UNINSTALLER_HEADER << EOM || true
 # Use bash strict mode
 set -xeuo pipefail
 unset HISTFILE
+
+# Process environment variables
+KEEP_STAGE="\${KEEP_STAGE:-0}"
+[[ "\$KEEP_STAGE" -le 0 ]] 2>/dev/null && KEEP_STAGE=0
 EOM
 read -r -d '' UNINSTALLER_CONTENTS << EOM || true
 # Remove this uninstaller script
@@ -238,7 +242,7 @@ if [[ -n "$CFG_TENSORRT_URL" ]]; then
 fi
 
 # Stage 1 uninstall
-UNINSTALLER_COMMANDS="Commands to undo stage 1:"
+UNINSTALLER_COMMANDS="Commands to undo stage 1:"$'\n''[[ "$KEEP_STAGE" -ge 1 ]] && exit 0'
 [[ -n "$CFG_TENSORRT_URL" ]] && UNINSTALLER_COMMANDS+=$'\n'"rm -rf '$TENSORRT_TAR'"
 UNINSTALLER_COMMANDS+=$'\n'"rmdir --ignore-fail-on-non-empty '$INSTALLERS_DIR' 2>/dev/null || true"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
@@ -289,6 +293,7 @@ OPENCV_CONTRIB_GIT_DIR="$ENV_DIR/opencv_contrib"
 # Stage 2 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 2:
+[[ "\$KEEP_STAGE" -ge 2 ]] && exit 0
 rm -rf '$PYTORCH_GIT_DIR' '$TORCHVISION_GIT_DIR' '$TORCHAUDIO_GIT_DIR' '$TORCHTEXT_GIT_DIR' '$OPENCV_GIT_DIR' '$OPENCV_CONTRIB_GIT_DIR'
 rmdir --ignore-fail-on-non-empty '$ENV_DIR' 2>/dev/null || true
 rmdir --ignore-fail-on-non-empty '$ENVS_DIR' 2>/dev/null || true
@@ -641,7 +646,7 @@ fi
 #
 
 # Stage 3 uninstall
-UNINSTALLER_COMMANDS="Commands to undo stage 3:"$'\n'"set +ux"
+UNINSTALLER_COMMANDS="Commands to undo stage 3:"$'\n''[[ "$KEEP_STAGE" -ge 3 ]] && exit 0'$'\n'"set +ux"
 [[ "$CFG_CONDA_CREATE" == "1" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda deactivate"$'\n'"conda env remove -n '$CFG_CONDA_ENV'"
 [[ "$CFG_CLEAN_CONDA" == "1" ]] && UNINSTALLER_COMMANDS+=$'\n'"conda clean -y --all"
 UNINSTALLER_COMMANDS+=$'\n'"set -ux"
@@ -840,6 +845,7 @@ OPENCV_PYTHON_STUB_DIR="$ENV_DIR/opencv-python-stub"
 # Stage 4 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 4:
+[[ "\$KEEP_STAGE" -ge 4 ]] && exit 0
 set +ux
 conda activate '$CFG_CONDA_ENV' && pip uninstall -y \$(pip list | grep -e "^opencv-" | cut -d' ' -f1 | tr $'\n' ' ') || true
 set -ux
@@ -945,6 +951,7 @@ PYTORCH_BUILD_DIR="$PYTORCH_GIT_DIR/build"
 # Stage 5 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 5:
+[[ "\$KEEP_STAGE" -ge 5 ]] && exit 0
 set +ux
 conda activate '$CFG_CONDA_ENV' && ( pip uninstall -y torch || true; [[ -d '$PYTORCH_GIT_DIR' ]] && cd '$PYTORCH_GIT_DIR' && python setup.py clean || true; )
 set -ux
@@ -1056,6 +1063,7 @@ TORCHVISION_BUILD_DIR="$TORCHVISION_GIT_DIR/build"
 if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 6:
+[[ "\$KEEP_STAGE" -ge 6 ]] && exit 0
 set +ux
 conda activate '$CFG_CONDA_ENV' && ( pip uninstall -y torchvision || true; [[ -d '$TORCHVISION_GIT_DIR' ]] && cd '$TORCHVISION_GIT_DIR' && python setup.py clean || true; )
 set -ux
@@ -1126,6 +1134,7 @@ TORCHAUDIO_BUILD_DIR="$TORCHAUDIO_GIT_DIR/build"
 if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 7:
+[[ "\$KEEP_STAGE" -ge 7 ]] && exit 0
 set +ux
 conda activate '$CFG_CONDA_ENV' && ( pip uninstall -y torchaudio || true; [[ -d '$TORCHAUDIO_GIT_DIR' ]] && cd '$TORCHAUDIO_GIT_DIR' && python setup.py clean || true; )
 set -ux
@@ -1200,6 +1209,7 @@ TORCHTEXT_BUILD_DIR="$TORCHTEXT_GIT_DIR/build"
 if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
 	read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 8:
+[[ "\$KEEP_STAGE" -ge 8 ]] && exit 0
 set +ux
 conda activate '$CFG_CONDA_ENV' && ( pip uninstall -y torchtext || true; [[ -d '$TORCHTEXT_GIT_DIR' ]] && cd '$TORCHTEXT_GIT_DIR' && python setup.py clean || true; )
 set -ux
@@ -1265,6 +1275,7 @@ fi
 # Stage 9 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 9:
+[[ "\$KEEP_STAGE" -ge 9 ]] && exit 0
 rm -rf '$PYTORCH_COMPILED'
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"

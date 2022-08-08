@@ -139,6 +139,10 @@ read -r -d '' UNINSTALLER_HEADER << EOM || true
 
 # Use bash strict mode
 set -xeuo pipefail
+
+# Process environment variables
+KEEP_STAGE="\${KEEP_STAGE:-0}"
+[[ "\$KEEP_STAGE" -le 0 ]] 2>/dev/null && KEEP_STAGE=0
 EOM
 read -r -d '' UNINSTALLER_CONTENTS << EOM || true
 # Remove this uninstaller script
@@ -180,6 +184,7 @@ for CUDA_PATCH_RUNFILE in "${CUDA_PATCH_RUNFILES[@]}"; do
 done
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 1:
+[[ "\$KEEP_STAGE" -ge 1 ]] && exit 0
 rm -rf '$CUDA_RUNFILE' $CUDA_PATCH_RUNFILES_QUOTED'$CUDNN_TAR'
 rmdir --ignore-fail-on-non-empty '$INSTALLERS_DIR' 2>/dev/null || true
 EOM
@@ -235,7 +240,7 @@ LOCAL_CUDNN_DIR="$LOCAL_CUDA_DIR/cuDNN-$CFG_CUDNN_VERSION"
 CUDA_SAMPLES_COMPILED="$LOCAL_CUDA_DIR/samples_compiled"
 
 # Stage 2 uninstall
-UNINSTALLER_COMMANDS='Commands to undo stage 2:'$'\n''(set +x; if [[ -x '"'$CUDA_INSTALL_DIR/bin/cuda-uninstaller'"' ]] && [[ -n "$(find /var/log/nvidia/.uninstallManifests -type f -name "uninstallManifest-*" -exec grep -F '"'$CUDA_INSTALL_DIR/'"' {} \+)" ]]; then sudo '"'$CUDA_INSTALL_DIR/bin/cuda-uninstaller'"'; else echo "Did not call CUDA uninstaller as no matching uninstaller/manifest was found"; fi;)'
+UNINSTALLER_COMMANDS='Commands to undo stage 2:'$'\n''[[ "$KEEP_STAGE" -ge 2 ]] && exit 0'$'\n''(set +x; if [[ -x '"'$CUDA_INSTALL_DIR/bin/cuda-uninstaller'"' ]] && [[ -n "$(find /var/log/nvidia/.uninstallManifests -type f -name "uninstallManifest-*" -exec grep -F '"'$CUDA_INSTALL_DIR/'"' {} \+)" ]]; then sudo '"'$CUDA_INSTALL_DIR/bin/cuda-uninstaller'"'; else echo "Did not call CUDA uninstaller as no matching uninstaller/manifest was found"; fi;)'
 read -r -d '' UNINSTALLER_COMMANDS_EXTRA << EOM || true
 sudo rm -rf '$CUDA_INSTALL_DIR' '$LOCAL_CUDA_SYSTEM_DIR'
 rm -rf '$LOCAL_CUDA_DIR' '$LOCAL_CUDNN_DIR'
@@ -466,6 +471,7 @@ CUDA_SAMPLES_BIN="$CUDA_SAMPLES_DIR/bin/x86_64"
 # Stage 3 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 3:
+[[ "\$KEEP_STAGE" -ge 3 ]] && exit 0
 if [[ -f '$CUDA_ADD_PATH' ]] && [[ -d "$CUDA_SAMPLES_DIR" ]]; then (set +ux; source '$CUDA_ADD_PATH'; set -ux; cd '$CUDA_SAMPLES_DIR' && make clean -j'$(nproc)' >/dev/null;) fi
 rm -rf '$CUDA_SAMPLES_BIN'
 rm -f '$CUDA_SAMPLES_COMPILED'
@@ -535,7 +541,7 @@ fi
 # Stage 4 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 4:
-# None
+[[ "\$KEEP_STAGE" -ge 4 ]] && exit 0
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
