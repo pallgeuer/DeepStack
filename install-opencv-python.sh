@@ -245,10 +245,10 @@ if [[ ! -d "$CONDA_ENV_DIR" ]]; then
 	exit 1
 fi
 if [[ -n "$CREATED_CONDA_ENV" ]]; then
-echo "Configuring conda environment activation scripts..."
-mkdir -p "$CONDA_ENV_DIR/etc/conda/activate.d"
-mkdir -p "$CONDA_ENV_DIR/etc/conda/deactivate.d"
-cat << 'EOM' > "$CONDA_ENV_DIR/etc/conda/activate.d/pythonpath.sh"
+	echo "Configuring conda environment activation scripts..."
+	mkdir -p "$CONDA_ENV_DIR/etc/conda/activate.d"
+	mkdir -p "$CONDA_ENV_DIR/etc/conda/deactivate.d"
+	cat << 'EOM' > "$CONDA_ENV_DIR/etc/conda/activate.d/pythonpath.sh"
 #!/bin/sh
 # The environment name is available under $CONDA_DEFAULT_ENV
 if [ -n "$PYTHONPATH" ]; then
@@ -257,7 +257,7 @@ if [ -n "$PYTHONPATH" ]; then
 fi
 # EOF
 EOM
-cat << 'EOM' > "$CONDA_ENV_DIR/etc/conda/deactivate.d/pythonpath.sh"
+	cat << 'EOM' > "$CONDA_ENV_DIR/etc/conda/deactivate.d/pythonpath.sh"
 #!/bin/sh
 # The environment name is available under $CONDA_DEFAULT_ENV
 if [ -n "$SUPPRESSED_PYTHONPATH" ]; then
@@ -266,18 +266,18 @@ if [ -n "$SUPPRESSED_PYTHONPATH" ]; then
 fi
 # EOF
 EOM
-cat << EOM > "$CONDA_ENV_DIR/etc/conda/activate.d/env_vars.sh"
+	cat << EOM > "$CONDA_ENV_DIR/etc/conda/activate.d/env_vars.sh"
 #!/bin/sh
 source '$CUDA_INSTALL_DIR/add_path.sh'
 # EOF
 EOM
-cat << EOM > "$CONDA_ENV_DIR/etc/conda/deactivate.d/env_vars.sh"
+	cat << EOM > "$CONDA_ENV_DIR/etc/conda/deactivate.d/env_vars.sh"
 #!/bin/sh
 source '$CUDA_INSTALL_DIR/remove_path.sh'
 # EOF
 EOM
-chmod +x "$CONDA_ENV_DIR/etc/conda/activate.d/pythonpath.sh" "$CONDA_ENV_DIR/etc/conda/deactivate.d/pythonpath.sh" "$CONDA_ENV_DIR/etc/conda/activate.d/env_vars.sh" "$CONDA_ENV_DIR/etc/conda/deactivate.d/env_vars.sh"
-echo
+	chmod +x "$CONDA_ENV_DIR/etc/conda/activate.d/pythonpath.sh" "$CONDA_ENV_DIR/etc/conda/deactivate.d/pythonpath.sh" "$CONDA_ENV_DIR/etc/conda/activate.d/env_vars.sh" "$CONDA_ENV_DIR/etc/conda/deactivate.d/env_vars.sh"
+	echo
 fi
 
 # Activate the conda environment
