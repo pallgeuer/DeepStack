@@ -52,7 +52,7 @@ Default installer scripts:
 
 - https://pytorch.org/get-started/locally (also: conda search -c pytorch magma-cuda*)
 	- If a version of PyTorch 1.11 newer than 1.11.0 is released then update install-pytorch-1.11.0-cuda-*.sh
-	- If a version of PyTorch 1.12 newer than 1.12.0 is released then update install-pytorch-1.12.0-cuda-*.sh
+	- If a version of PyTorch 1.12 newer than 1.12.1 is released then update install-pytorch-1.12.1-cuda-*.sh
 	- If a version of PyTorch 1.13 or newer is released then add it
 	- If a new version of PyTorch is released then check whether it explicitly supports TensorRT 8 yet, and update if so
 

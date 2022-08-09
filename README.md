@@ -30,10 +30,10 @@ component versions:
  * **cuDNN:** 7.6.5 to 8.4.1
  * **OpenCV:** 3.4.17 to 4.5.5
  * **TensorRT:** 6.0.1 to 8.4.2
- * **PyTorch:** 1.8.2 to 1.12.0
- * **Torchvision:** 0.9.2 to 0.13.0
- * **Torchaudio:** 0.8.2 to 0.12.0
- * **Torchtext:** 0.9.2 to 0.13.0
+ * **PyTorch:** 1.8.2 to 1.12.1
+ * **Torchvision:** 0.9.2 to 0.13.1
+ * **Torchaudio:** 0.8.2 to 0.12.1
+ * **Torchtext:** 0.9.2 to 0.13.1
 
 As stated however, PyTorch versions prior to 1.8.2 LTS can *likely* be built
 with this repository, it just hasn't been tested yet.
