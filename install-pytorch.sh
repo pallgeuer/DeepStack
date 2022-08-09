@@ -741,7 +741,6 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 		else
 			conda env update -n "$CFG_CONDA_ENV" --file "$CFG_CONDA_LOAD"
 		fi
-		conda install $CFG_AUTO_YES magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"
 	else
 		conda install $CFG_AUTO_YES cython
 		conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
@@ -811,6 +810,7 @@ echo
 # Save the environment specifications to file
 if [[ "$CFG_CONDA_SAVE" != "0" ]]; then
 	PYTHON_SPEC="$(python -c 'import sys; print("py%d%d%d" % (sys.version_info.major, sys.version_info.minor, sys.version_info.micro))')"
+	CUDA_SPEC="$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"
 	DATE_SPEC="$(date '+%Y%m%d')"
 	TAG_SPEC=
 	[[ -n "$CFG_TORCHVISION_TAG" ]] && TAG_SPEC+="v"
@@ -819,14 +819,14 @@ if [[ "$CFG_CONDA_SAVE" != "0" ]]; then
 	[[ -n "$CFG_TENSORRT_URL" ]] && TAG_SPEC+="r"
 	[[ -n "$TAG_SPEC" ]] && TAG_SPEC+="-"
 	CONDA_SPEC_DIR="$CFG_ROOT_DIR/conda"
-	CONDA_SPEC_YML="$CONDA_SPEC_DIR/conda-pytorch-$PYTHON_SPEC-$TAG_SPEC$DATE_SPEC.yml"
-	CONDA_SPEC_TXT="$CONDA_SPEC_DIR/conda-pytorch-$PYTHON_SPEC-$TAG_SPEC$DATE_SPEC-explicit.txt"
+	CONDA_SPEC_YML="$CONDA_SPEC_DIR/conda-pytorch-$PYTHON_SPEC-cu$CUDA_SPEC-$TAG_SPEC$DATE_SPEC.yml"
+	CONDA_SPEC_TXT="$CONDA_SPEC_DIR/conda-pytorch-$PYTHON_SPEC-cu$CUDA_SPEC-$TAG_SPEC$DATE_SPEC-explicit.txt"
 	PIP_NODEPS_SPEC="# PIPNODEPS: --no-cache-dir $(pip freeze | egrep "^(pycuda|pytools)==" | tr '\n' ' ' | xargs)"
 	set +u
 	echo "Saving conda env to: $CONDA_SPEC_YML"
-	{ conda env export | egrep -v "^prefix:|- magma-cuda" | sed '/- pip:/Q'; echo "$PIP_NODEPS_SPEC"; } > "$CONDA_SPEC_YML"
+	{ conda env export | grep -v "^prefix:" | sed '/- pip:/Q'; echo "$PIP_NODEPS_SPEC"; } > "$CONDA_SPEC_YML"
 	echo "Saving conda env to: $CONDA_SPEC_TXT"
-	{ conda list --explicit | grep -v "/magma-cuda"; echo "$PIP_NODEPS_SPEC"; } > "$CONDA_SPEC_TXT"
+	{ conda list --explicit; echo "$PIP_NODEPS_SPEC"; } > "$CONDA_SPEC_TXT"
 	set -u
 	echo
 fi

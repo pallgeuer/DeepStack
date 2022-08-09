@@ -381,11 +381,11 @@ Alternatively, one may **want** to construct an environment with older Python
 package versions anyway, in order to support older code. In either case, this is
 supported via the conda environment specification files located in the `conda`
 subdirectory. These can be generated using `CFG_CONDA_SAVE=1`, and can be used
-(much) later for a new PyTorch install using for example
-`CFG_CONDA_LOAD=conda/conda-pytorch-py3104-vat-20220808.yml`. If nothing else
-works, one can still manually create a conda environment with all the required
-constrained dependency versions, and use that for a new PyTorch install by
-specifying the environment name via `CFG_CONDA_ENV=myenv` and setting
+(much) later for a new PyTorch install using for example 
+`CFG_CONDA_LOAD=conda/conda-pytorch-py3104-cu116-vat-20220808.yml`. If nothing 
+else works, one can still manually create a conda environment with all the 
+required constrained dependency versions, and use that for a new PyTorch install 
+by specifying the environment name via `CFG_CONDA_ENV=myenv` and setting 
 `CFG_CONDA_CREATE=0`.
 
 ## Future Work
