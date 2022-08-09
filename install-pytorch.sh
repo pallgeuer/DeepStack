@@ -773,7 +773,14 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 			pip install --no-deps ${PIP_NODEPS_ARGS:13}
 		done < <(grep "^# PIPNODEPS: " < "$CFG_CONDA_LOAD")
 	else
-		pip install --no-deps --no-cache-dir pycuda pytools
+		TYPING_EXTENSIONS_VERSION="$(conda list | grep typing-extensions | head -n1 | xargs | cut -d' ' -f2)"
+		TYPING_EXTENSIONS_VERSION="${TYPING_EXTENSIONS_VERSION%%.*}"
+		if [[ -n "$TYPING_EXTENSIONS_VERSION" ]] && [[ "$TYPING_EXTENSIONS_VERSION" -lt 4 ]]; then
+			PYTOOLS_VERSION="<2022.1.5"
+		else
+			PYTOOLS_VERSION=
+		fi
+		pip install --no-deps --no-cache-dir pycuda pytools$PYTOOLS_VERSION
 	fi
 	echo
 	if [[ -n "$CFG_TENSORRT_URL" ]]; then
