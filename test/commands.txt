@@ -78,19 +78,18 @@ Further links:
 You can test all CUDA installers using:
 	# Make sure no clashing installations already present
 	# Give console infinite scrollback
-	cd ~/Programs/DeepStack
-	installers=(install-cuda-*.sh); for installer in "${installers[@]}"; do echo; echo "RUNNING INSTALLER: $installer"; if CFG_CLEAN_INSTALLERS=0 ./"$installer"; then notify-send -a Konsole -h string:desktop-entry:org.kde.konsole SUCCESS "Successfully installed: $installer"; else notify-send -a Konsole -h string:desktop-entry:org.kde.konsole FAILURE "FAILED TO INSTALL: $installer"; fi; done
 	# NOTE: Use "${installers[@]:3}" for example to skip the first 3 installers
-	# UNDO: Rename Installers to InstallersOLD if you want to keep them
-	# UNDO: for uninstaller in Uninstallers/uninstall-cuda-*.sh; do "$uninstaller"; done
-	# UNDO: Rename InstallersOLD back to Installers if necessary
+	cd ~/Programs/DeepStack
+	installers=($(find -maxdepth 1 -name "install-cuda-*.sh" -printf '%P\n' | sort)); for installer in "${installers[@]}"; do echo; echo "RUNNING INSTALLER: $installer"; if CFG_CLEAN_INSTALLERS=0 ./"$installer"; then notify-send -a Konsole -h string:desktop-entry:org.kde.konsole SUCCESS "Successfully installed: $installer"; else notify-send -a Konsole -h string:desktop-entry:org.kde.konsole FAILURE "FAILED TO INSTALL: $installer"; fi; done
+	# UNDO: for uninstaller in Uninstallers/uninstall-cuda-*.sh; do KEEP_INSTALLERS=1 "$uninstaller"; done
 
 You can test all OpenCV Python installers using:
 	# Ensure all required CUDA versions are installed
 	# Make sure no clashing installations already present
 	# Give console infinite scrollback
+	# NOTE: Use "${installers[@]:3}" for example to skip the first 3 installers
 	cd ~/Programs/DeepStack
-	installers=(install-opencv-python-*.sh); CFG_STAGE=-1 ./"${installers[0]}"; for installer in "${installers[@]}"; do echo; echo "RUNNING INSTALLER: $installer"; if CFG_ALLOW_SUDO=0 CFG_CLEAN_WORKDIR=0 CFG_CLEAN_CONDA=0 CFG_CONDA_SAVE=1 ./"$installer"; then notify-send -a Konsole -h string:desktop-entry:org.kde.konsole SUCCESS "Successfully installed: $installer"; else notify-send -a Konsole -h string:desktop-entry:org.kde.konsole FAILURE "FAILED TO INSTALL: $installer"; fi; done; conda clean -y --all
+	installers=($(find -maxdepth 1 -name "install-opencv-python-*.sh" -printf '%P\n' | sort)); CFG_STAGE=-1 ./"${installers[0]}"; for installer in "${installers[@]}"; do echo; echo "RUNNING INSTALLER: $installer"; if CFG_ALLOW_SUDO=0 CFG_CLEAN_WORKDIR=0 CFG_CLEAN_CONDA=0 CFG_CONDA_SAVE=1 ./"$installer"; then notify-send -a Konsole -h string:desktop-entry:org.kde.konsole SUCCESS "Successfully installed: $installer"; else notify-send -a Konsole -h string:desktop-entry:org.kde.konsole FAILURE "FAILED TO INSTALL: $installer"; fi; done; conda clean -y --all
 	# UNDO: for uninstaller in Uninstallers/uninstall-opencv-*.sh; do "$uninstaller"; done
 
 You can test all PyTorch installers using:
@@ -98,8 +97,8 @@ You can test all PyTorch installers using:
 	# Make sure no clashing installations already present
 	# Consider manually pre-downloading all the required TensorRT installers
 	# Give console infinite scrollback
+	# NOTE: Use "${installers[@]:3}" for example to skip the first 3 installers
+	# NOTE: By default, the following commands UNINSTALL all successfully completed installers!
 	cd ~/Programs/DeepStack
-	installers=(install-pytorch-*.sh); CFG_STAGE=-1 ./"${installers[0]}"; for installer in "${installers[@]}"; do echo; echo "RUNNING INSTALLER: $installer"; if CFG_ALLOW_SUDO=0 CFG_CLEAN_INSTALLERS=0 CFG_CLEAN_CONDA=0 CFG_CONDA_SAVE=1 ./"$installer"; then notify-send -a Konsole -h string:desktop-entry:org.kde.konsole SUCCESS "Successfully installed: $installer (auto-uninstalling again)"; uninstaller="${installer#install-}"; uninstaller="uninstall-${uninstaller%.sh}-pytorch.sh"; Uninstallers/"$uninstaller"; else notify-send -a Konsole -h string:desktop-entry:org.kde.konsole FAILURE "FAILED TO INSTALL: $installer"; fi; done; conda clean -y --all
-	# UNDO: Rename Installers to InstallersOLD if you want to keep them
-	# UNDO: for uninstaller in Uninstallers/uninstall-pytorch-*.sh; do "$uninstaller"; done
-	# UNDO: Rename InstallersOLD back to Installers if necessary
+	installers=($(find -maxdepth 1 -name "install-pytorch-*.sh" -printf '%P\n' | sort)); CFG_STAGE=-1 ./"${installers[0]}"; for installer in "${installers[@]}"; do echo; echo "RUNNING INSTALLER: $installer"; if CFG_ALLOW_SUDO=0 CFG_CLEAN_INSTALLERS=0 CFG_CLEAN_CONDA=0 CFG_CONDA_SAVE=1 ./"$installer"; then notify-send -a Konsole -h string:desktop-entry:org.kde.konsole SUCCESS "Successfully installed: $installer (auto-uninstalling again)"; uninstaller="${installer#install-}"; uninstaller="uninstall-${uninstaller%.sh}-pytorch.sh"; Uninstallers/"$uninstaller"; else notify-send -a Konsole -h string:desktop-entry:org.kde.konsole FAILURE "FAILED TO INSTALL: $installer"; fi; done; conda clean -y --all
+	# UNDO: for uninstaller in Uninstallers/uninstall-pytorch-*.sh; do KEEP_INSTALLERS=1 "$uninstaller"; done

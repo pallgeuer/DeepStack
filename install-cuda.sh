@@ -142,7 +142,9 @@ set -xeuo pipefail
 
 # Process environment variables
 KEEP_STAGE="\${KEEP_STAGE:-0}"
+KEEP_INSTALLERS="\${KEEP_INSTALLERS:-0}"
 [[ "\$KEEP_STAGE" -le 0 ]] 2>/dev/null && KEEP_STAGE=0
+[[ "\$KEEP_INSTALLERS" != "0" ]] && KEEP_INSTALLERS=1
 EOM
 read -r -d '' UNINSTALLER_CONTENTS << EOM || true
 # Remove this uninstaller script
@@ -185,7 +187,7 @@ done
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
 Commands to undo stage 1:
 [[ "\$KEEP_STAGE" -ge 1 ]] && exit 0
-rm -rf '$CUDA_RUNFILE' $CUDA_PATCH_RUNFILES_QUOTED'$CUDNN_TAR'
+[[ "\$KEEP_INSTALLERS" == "0" ]] && rm -rf '$CUDA_RUNFILE' $CUDA_PATCH_RUNFILES_QUOTED'$CUDNN_TAR'
 rmdir --ignore-fail-on-non-empty '$INSTALLERS_DIR' 2>/dev/null || true
 EOM
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"

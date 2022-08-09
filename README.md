@@ -368,6 +368,11 @@ or if you want to just uninstall all stages beyond stage 2 for instance,
 ```
 KEEP_STAGE=2 Uninstallers/uninstall-cuda-11.1.sh
 ```
+You can also opt to retain any downloaded installers to avoid needing to
+re-download them for the next install:
+```
+KEEP_INSTALLERS=1 Uninstallers/uninstall-cuda-11.1.sh
+```
 You can then re-run the entire installer script to try again (assuming you have
 changed something that makes you think it will work this time). This
 automatically skips already completed stages and keeps going where it left off.

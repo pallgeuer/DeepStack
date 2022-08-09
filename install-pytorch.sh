@@ -202,7 +202,9 @@ unset HISTFILE
 
 # Process environment variables
 KEEP_STAGE="\${KEEP_STAGE:-0}"
+KEEP_INSTALLERS="\${KEEP_INSTALLERS:-0}"
 [[ "\$KEEP_STAGE" -le 0 ]] 2>/dev/null && KEEP_STAGE=0
+[[ "\$KEEP_INSTALLERS" != "0" ]] && KEEP_INSTALLERS=1
 EOM
 read -r -d '' UNINSTALLER_CONTENTS << EOM || true
 # Remove this uninstaller script
@@ -243,7 +245,7 @@ fi
 
 # Stage 1 uninstall
 UNINSTALLER_COMMANDS="Commands to undo stage 1:"$'\n''[[ "$KEEP_STAGE" -ge 1 ]] && exit 0'
-[[ -n "$CFG_TENSORRT_URL" ]] && UNINSTALLER_COMMANDS+=$'\n'"rm -rf '$TENSORRT_TAR'"
+[[ -n "$CFG_TENSORRT_URL" ]] && UNINSTALLER_COMMANDS+=$'\n'"[[ \"\$KEEP_INSTALLERS\" == \"0\" ]] && rm -rf '$TENSORRT_TAR'"
 UNINSTALLER_COMMANDS+=$'\n'"rmdir --ignore-fail-on-non-empty '$INSTALLERS_DIR' 2>/dev/null || true"
 add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
