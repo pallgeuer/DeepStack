@@ -753,7 +753,18 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 		fi
 	else
 		conda install $CFG_AUTO_YES cython
-		conda install $CFG_AUTO_YES ceres-solver cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
+		CERES_VERSION=
+		if [[ -f "$OPENCV_GIT_DIR/modules/python/package/setup.py" ]]; then
+			OPENCV_VERSION_PARSED="$(grep -oP -m1 "(?<=os\.environ\.get\('OPENCV_VERSION', ')\d+\.\d+\.\d+(?=\w*'\))" < "$OPENCV_GIT_DIR/modules/python/package/setup.py" | head -n1)"
+			if [[ -n "$OPENCV_VERSION_PARSED" ]]; then
+				REFA="$OPENCV_VERSION_PARSED"$'\n'"3.4.17"
+				REFB="$OPENCV_VERSION_PARSED"$'\n'"4.5.5"
+				if [[ "$(sort -V <<< "$REFA")" == "$REFA" || ("$(sort -V <<< "$REFB")" == "$REFB" && "${OPENCV_VERSION_PARSED%%.*}" -ge 4) ]]; then
+					CERES_VERSION="<=2.1.0"
+				fi
+			fi
+		fi
+		conda install $CFG_AUTO_YES ceres-solver$CERES_VERSION cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
 		[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six onnx protobuf libprotobuf  # For TensorRT
 		conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pyyaml requests six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
 		[[ -n "$CFG_TORCHVISION_TAG" ]] && conda install $CFG_AUTO_YES typing_extensions numpy requests scipy scikit-learn-intelex  # For Torchvision
