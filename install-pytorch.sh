@@ -460,6 +460,14 @@ if [[ ! -f "$PYTORCH_COMPILED" ]] && [[ ! -d "$OPENCV_GIT_DIR" ]]; then
 		git checkout "$CFG_OPENCV_TAG"
 		cd "$OPENCV_CONTRIB_GIT_DIR"
 		git checkout "$CFG_OPENCV_TAG"
+		[[ -f "$OPENCV_GIT_DIR/modules/dnn/CMakeLists.txt" ]] && patch -s -u -f -F 0 -N -r - --no-backup-if-mismatch "$OPENCV_GIT_DIR/modules/dnn/CMakeLists.txt" >/dev/null << 'EOM' || true
+@@ -159,2 +159,5 @@
+ ocv_module_include_directories(${include_dirs})
++get_target_property(libprotobuf_interface_include_dirs libprotobuf INTERFACE_SYSTEM_INCLUDE_DIRECTORIES)
++string(REGEX REPLACE "\\$<BUILD_INTERFACE:([^>]*)>" "\\1" libprotobuf_interface_include_dirs ${libprotobuf_interface_include_dirs})
++include_directories(BEFORE SYSTEM ${libprotobuf_interface_include_dirs})
+ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+EOM
 	)
 fi
 echo

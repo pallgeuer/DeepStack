@@ -182,6 +182,7 @@ ENVS_DIR="$CFG_ROOT_DIR/envs"
 ENV_DIR="$ENVS_DIR/$CFG_CONDA_ENV"
 OPENCV_PYTHON_GIT_DIR="$ENV_DIR/opencv-python"
 OPENCV_PYTHON_COMPILED="$ENV_DIR/opencv-python-compiled"
+OPENCV_GIT_DIR="$OPENCV_PYTHON_GIT_DIR/opencv"
 
 # Stage 1 uninstall
 read -r -d '' UNINSTALLER_COMMANDS << EOM || true
@@ -214,6 +215,14 @@ if [[ ! -f "$OPENCV_PYTHON_COMPILED" ]] && [[ ! -d "$OPENCV_PYTHON_GIT_DIR" ]]; 
 		git submodule status
 		[[ -f "$OPENCV_PYTHON_GIT_DIR/pyproject.toml" ]] && sed -i 's/"setuptools", "wheel", "scikit-build", "cmake"/"setuptools==59.2.0", "wheel==0.37.0", "cmake>=3.1", "scikit-build>=0.13.2"/g' "$OPENCV_PYTHON_GIT_DIR/pyproject.toml"
 		[[ -f "$OPENCV_PYTHON_GIT_DIR/setup.py" ]] && sed -i 's/ cmake_install_dir=cmake_install_reldir,/ _cmake_install_dir=cmake_install_reldir,/g' "$OPENCV_PYTHON_GIT_DIR/setup.py"
+		[[ -f "$OPENCV_GIT_DIR/modules/dnn/CMakeLists.txt" ]] && patch -s -u -f -F 0 -N -r - --no-backup-if-mismatch "$OPENCV_GIT_DIR/modules/dnn/CMakeLists.txt" >/dev/null << 'EOM' || true
+@@ -159,2 +159,5 @@
+ ocv_module_include_directories(${include_dirs})
++get_target_property(libprotobuf_interface_include_dirs libprotobuf INTERFACE_SYSTEM_INCLUDE_DIRECTORIES)
++string(REGEX REPLACE "\\$<BUILD_INTERFACE:([^>]*)>" "\\1" libprotobuf_interface_include_dirs ${libprotobuf_interface_include_dirs})
++include_directories(BEFORE SYSTEM ${libprotobuf_interface_include_dirs})
+ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+EOM
 	)
 fi
 echo
