@@ -7,10 +7,7 @@ Default installer scripts:
 
 - Worry about:
 	- nvidia-fs kernel objects and how to most appropriately install them (come in the CUDA 11.7+ runfiles but are by default disabled)
-	- Channel priority is now flexible by default to avoid unnecessary conda failure, even though this results in more packages ending up from non-default channels than strictly needed
 	- setuptools is fixed at 58.0.4 due to fundamental changes that happened beyond that at some point (removal of distutils?) => This is okay for now, but far into the future a better solution is desired
-	- Eventually conda packages will be too new for the older PyTorch/etc library versions, so need to save conda environment package versions that definitely worked
-	- OpenCV 3.4.18+ and 4.6.0+ requires ceres-solver>2.1.0 (strictly greater), but this is not available over conda yet, and OpenCV <=3.4.17 and <=4.5.5 requires ceres-solver<=2.1.0. Thus, will the existing compilation of OpenCV suddenly break when a newer ceres-solver is released?
 
 - https://developer.nvidia.com/cuda-toolkit-archive
 	- If a patch for CUDA 10.2 newer than 10.2.2 is released then update install-cuda-10.2-cudnn-7.6.5.sh
@@ -34,21 +31,23 @@ Default installer scripts:
 	- SET CFG_TENSORRT_ONNX_TAG AS DESCRIBED IN THE NEXT PARAGRAPH
 	- SET CFG_TENSORRT_PYTORCH BASED ON ATTEMPTING INSTALLATION WITH IT COMMENTED OUT FIRST (DEFAULT: 1)
 	- If a version of TensorRT 8.2.X > 8.2.5 is released that targets cuDNN 8.2.1 and CUDA 11.3 then update the TensorRT version in install-pytorch-1.10.2-cuda-11.3-trtext-8.2.5.sh and install-pytorch-1.11.0-cuda-11.3-trtext-8.2.5.sh
-	- If some cuDNN 8.4.X > 8.4.1 becomes the targeted cuDNN for some non-EA TensorRT >=8.4 then update the cuDNN version in install-cuda-11.6-cudnn-8.4.1.sh and install-cuda-11.7-cudnn-8.4.1.sh, and update the TensorRT version in install-pytorch-1.12.0-cuda-11.6-trtext-8.4.2.sh
+	- If some cuDNN 8.4.X > 8.4.1 becomes the targeted cuDNN for some non-EA TensorRT >=8.4 then update the cuDNN version in install-cuda-11.6-cudnn-8.4.1.sh and install-cuda-11.7-cudnn-8.4.1.sh, and update the TensorRT version in install-pytorch-1.12.1-cuda-11.6-trtext-8.4.2.sh
 	- If some cuDNN >=8.5 becomes the targeted cuDNN for some non-EA TensorRT >=8.5 then use that cuDNN version for CUDA 11.8+
 
 - https://github.com/onnx/onnx-tensorrt/tags
 	- If a version of onnx-tensorrt newer than f42daeee49f2517a954c5601f0f76bef9ed94b62 (current head of origin/8.2-GA branch) is released that explicitly supports TensorRT 8.2.3+ then update install-pytorch-1.10.2-cuda-11.3-trtext-8.2.5.sh and install-pytorch-1.11.0-cuda-11.3-trtext-8.2.5.sh
-	- If a version of onnx-tensorrt newer than c3cfcbc8248c6bd007e6630af2085df5e4834b42 (one commit after release/8.4-GA) is released that explicitly supports TensorRT 8.4.1+ then update install-pytorch-1.12.0-cuda-11.6-trtext-8.4.2.sh
+	- If a version of onnx-tensorrt newer than c3cfcbc8248c6bd007e6630af2085df5e4834b42 (one commit after release/8.4-GA) is released that explicitly supports TensorRT 8.4.1+ then update install-pytorch-1.12.1-cuda-11.6-trtext-8.4.2.sh
 
 - https://github.com/opencv/opencv-python/releases
-	- If the opencv-python GitHub releases a tag newer than 65 for OpenCV 3 then update install-opencv-python-3.4.18-cuda-10.1.sh
-	- If the opencv-python GitHub releases a tag newer than 66 for OpenCV 4 then update install-opencv-python-4.5.5-cuda-10.2.sh and install-opencv-python-4.5.5-cuda-11.6.sh
+	- NOTE: You can only continue to update the OpenCV versions once ceres-solver releases a tag >2.1.0 on conda => conda search -c conda-forge ceres-solver (https://github.com/ceres-solver/ceres-solver/tags)
+	- If the opencv-python GitHub releases a tag newer than 63 for OpenCV 3 then update install-opencv-python-3.4.17-cuda-10.2.sh
+	- If the opencv-python GitHub releases a tag newer than 64 for OpenCV 4 then update install-opencv-python-4.5.5-cuda-10.2.sh and install-opencv-python-4.5.5-cuda-11.6.sh
 	- If the selected OpenCV 4 version supports Python 3.11 then update install-opencv-python-4.5.5-cuda-11.6.sh
 	- If OpenCV 5 is released then add it
 
 - https://github.com/opencv/opencv/tags
-	- If a version of OpenCV newer than 4.5.5 is released then update install-pytorch-1.11.0-cuda-*.sh and install-pytorch-1.12.0-cuda-*.sh (ONLY if ceres-solver>2.1.0 is available via conda)
+	- NOTE: You can only continue to update the OpenCV versions once ceres-solver releases a tag >2.1.0 on conda => conda search -c conda-forge ceres-solver (https://github.com/ceres-solver/ceres-solver/tags)
+	- If a version of OpenCV newer than 4.5.5 is released then update install-pytorch-1.11.0-cuda-*.sh and install-pytorch-1.12.1-cuda-*.sh
 
 - https://pytorch.org/get-started/locally (also: conda search -c pytorch magma-cuda*)
 	- If a version of PyTorch 1.11 newer than 1.11.0 is released then update install-pytorch-1.11.0-cuda-*.sh
