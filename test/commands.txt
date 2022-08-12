@@ -6,6 +6,7 @@ Default installer scripts:
 - Look if README.md should be changed if you update anything! (Version numbers as well as example scripts in the how-to)
 
 - Worry about:
+	- Rename to DeepInstall (or other?) to ensure googlability?
 	- nvidia-fs kernel objects and how to most appropriately install them (come in the CUDA 11.7+ runfiles but are by default disabled)
 	- setuptools is fixed at 58.0.4 due to fundamental changes that happened beyond that at some point (removal of distutils?) => This is okay for now, but far into the future a better solution is desired
 
