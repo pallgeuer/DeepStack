@@ -1,6 +1,6 @@
 # DeepStack: Customizable Deep Learning Stack Installation Scripts
 
-**Version:** 1.5
+**Version:** 1.6
 
 **Author:** Philipp Allgeuer
 
