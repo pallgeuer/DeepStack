@@ -1010,7 +1010,7 @@ if [[ ! -f "$PYTORCH_COMPILED" ]] && find "$CONDA_ENV_DIR/lib" -type d -path "*/
 		else
 			export USE_TENSORRT=OFF
 		fi
-		RETRIED=
+		ATTEMPT=1
 		while ! time python setup.py build; do
 			echo
 			if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
@@ -1022,10 +1022,10 @@ if [[ ! -f "$PYTORCH_COMPILED" ]] && find "$CONDA_ENV_DIR/lib" -type d -path "*/
 				response="${response,,}"
 				[[ "$response" != "y" ]] && exit 1
 				echo
-			elif [[ -n "$RETRIED" ]]; then
+			elif [[ "$ATTEMPT" -ge 5 ]]; then
 				exit 1
 			fi
-			RETRIED=true
+			((ATTEMPT++))
 		done
 		echo
 		echo "Checking which external libraries the build products dynamically link to..."
@@ -1116,7 +1116,7 @@ if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 			set -u
 			export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
 			export FORCE_CUDA=ON
-			RETRIED=
+			ATTEMPT=1
 			while ! time python setup.py build; do
 				echo
 				if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
@@ -1125,10 +1125,10 @@ if [[ -n "$CFG_TORCHVISION_TAG" ]]; then
 					response="${response,,}"
 					[[ "$response" != "y" ]] && exit 1
 					echo
-				elif [[ -n "$RETRIED" ]]; then
+				elif [[ "$ATTEMPT" -ge 5 ]]; then
 					exit 1
 				fi
-				RETRIED=true
+				((ATTEMPT++))
 			done
 			echo
 			echo "Checking which external libraries the build products dynamically link to..."
@@ -1191,7 +1191,7 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 			set -u
 			export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
 			export USE_CUDA=ON BUILD_SOX=ON
-			RETRIED=
+			ATTEMPT=1
 			while ! time python setup.py build; do
 				echo
 				if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
@@ -1200,10 +1200,10 @@ if [[ -n "$CFG_TORCHAUDIO_TAG" ]]; then
 					response="${response,,}"
 					[[ "$response" != "y" ]] && exit 1
 					echo
-				elif [[ -n "$RETRIED" ]]; then
+				elif [[ "$ATTEMPT" -ge 5 ]]; then
 					exit 1
 				fi
-				RETRIED=true
+				((ATTEMPT++))
 			done
 			echo
 			echo "Checking which external libraries the build products dynamically link to..."
@@ -1261,7 +1261,7 @@ if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
 			conda activate "$CFG_CONDA_ENV"
 			set -u
 			export CMAKE_PREFIX_PATH="$CONDA_PREFIX"
-			RETRIED=
+			ATTEMPT=1
 			while ! time python setup.py build; do
 				echo
 				if [[ "$CFG_AUTO_ANSWER" == "0" ]]; then
@@ -1270,10 +1270,10 @@ if [[ -n "$CFG_TORCHTEXT_TAG" ]]; then
 					response="${response,,}"
 					[[ "$response" != "y" ]] && exit 1
 					echo
-				elif [[ -n "$RETRIED" ]]; then
+				elif [[ "$ATTEMPT" -ge 5 ]]; then
 					exit 1
 				fi
-				RETRIED=true
+				((ATTEMPT++))
 			done
 			echo
 			echo "Checking which external libraries the build products dynamically link to..."
