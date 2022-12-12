@@ -337,6 +337,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 		fi
 		conda install $CFG_AUTO_YES ceres-solver$CERES_VERSION cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig six snappy tbb tbb-devel tbb4py tifffile
 		conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python|(open)?blas(-devel)?|)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
+		conda install $CFG_AUTO_YES -c conda-forge libstdcxx-ng libgcc-ng libgfortran-ng libgfortran5
 		conda install $CFG_AUTO_YES setuptools==58.0.4
 		CERES_EIGEN_VERSION="$(grep -oP '(?<=set\(CERES_EIGEN_VERSION)\s+[0-9.]+\s*(?=\))' "$CONDA_ENV_DIR/lib/cmake/Ceres/CeresConfig.cmake")"
 		CERES_EIGEN_VERSION="${CERES_EIGEN_VERSION// /}"
