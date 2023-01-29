@@ -371,6 +371,15 @@ EOM
    caffe2_binary_target("convert_and_benchmark.cc")
 EOM
 		fi
+		if [[ -f "$PYTORCH_GIT_DIR/cmake/public/mkl.cmake" ]]; then
+			grep -q 'INTERFACE_LINK_DIRECTORIES' "$PYTORCH_GIT_DIR/cmake/public/mkl.cmake" || patch -s -u -f -F 0 -N -r - --no-backup-if-mismatch "$PYTORCH_GIT_DIR/cmake/public/mkl.cmake" >/dev/null << 'EOM' || true
+@@ -10,3 +10,4 @@
+ set_property(
+   TARGET caffe2::mkl PROPERTY INTERFACE_LINK_LIBRARIES
+   ${MKL_LIBRARIES})
++set_property(TARGET caffe2::mkl PROPERTY INTERFACE_LINK_DIRECTORIES ${MKL_ROOT}/lib)  # Temporary fix until https://github.com/pytorch/pytorch/issues/73008 is resolved
+EOM
+		fi
 		if [[ -n "$CFG_TENSORRT_URL" ]]; then
 			if [[ -n "$CFG_TENSORRT_ONNX_TAG" ]]; then
 				(
