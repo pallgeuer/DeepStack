@@ -636,18 +636,31 @@ EOM
 				source "$TENSORRT_INSTALL_DIR/add_path.sh"
 				set -u
 				cd "$TENSORRT_INSTALL_DIR/bintmp"
-				echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_mnist"
-				"$TENSORRT_INSTALL_DIR/bintmp/sample_mnist"
-				echo
-				echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_mnist_api"
-				"$TENSORRT_INSTALL_DIR/bintmp/sample_mnist_api"
-				echo
-				echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_onnx_mnist"
-				"$TENSORRT_INSTALL_DIR/bintmp/sample_onnx_mnist"
-				echo
-				echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_uff_mnist"
-				"$TENSORRT_INSTALL_DIR/bintmp/sample_uff_mnist"
-				echo
+				if [[ -f "$TENSORRT_INSTALL_DIR/bintmp/sample_mnist" ]]; then
+					echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_mnist"
+					"$TENSORRT_INSTALL_DIR/bintmp/sample_mnist"
+					echo
+				fi
+				if [[ -f "$TENSORRT_INSTALL_DIR/bintmp/sample_mnist_api" ]]; then
+					echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_mnist_api"
+					"$TENSORRT_INSTALL_DIR/bintmp/sample_mnist_api"
+					echo
+				fi
+				if [[ -f "$TENSORRT_INSTALL_DIR/bintmp/sample_onnx_mnist" ]]; then
+					echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_onnx_mnist"
+					"$TENSORRT_INSTALL_DIR/bintmp/sample_onnx_mnist"
+					echo
+				fi
+				if [[ -f "$TENSORRT_INSTALL_DIR/bintmp/sample_uff_mnist" ]]; then
+					echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_uff_mnist"
+					"$TENSORRT_INSTALL_DIR/bintmp/sample_uff_mnist"
+					echo
+				fi
+				if [[ -f "$TENSORRT_INSTALL_DIR/bintmp/sample_char_rnn" ]]; then
+					echo "Running: $TENSORRT_INSTALL_DIR/bintmp/sample_char_rnn"
+					"$TENSORRT_INSTALL_DIR/bintmp/sample_char_rnn"
+					echo
+				fi
 			)
 			touch "$TENSORRT_SAMPLES_COMPILED"
 			echo "Cleaning up TensorRT samples build..."
