@@ -68,10 +68,11 @@ CFG_OPENCV_VERSION="${CFG_OPENCV_VERSION:-$CFG_OPENCV_TAG}"
 CFG_OPENCV_HEADLESS="${CFG_OPENCV_HEADLESS:-0}"
 CFG_OPENCV_CMAKE="${CFG_OPENCV_CMAKE:-}"  # Note: This is not expansion-safe
 
-# TensorRT version and URL to use (https://developer.nvidia.com/nvidia-tensorrt-download -> TensorRT X -> Agree to the terms -> TensorRT X.X.X for Linux x86_64/Ubuntu YY.YY and CUDA Z.Z TAR package -> Fix URL capitalisation if necessary), branch or tag to use for onnx-tensorrt (https://github.com/onnx/onnx-tensorrt/branches/all or https://github.com/onnx/onnx-tensorrt/tags), and whether to explicitly compile TensorRT into PyTorch or just install it into the conda environment
+# TensorRT version and URL to use (https://developer.nvidia.com/nvidia-tensorrt-download -> TensorRT X -> Agree to the terms -> TensorRT X.X.X for Linux x86_64/Ubuntu YY.YY and CUDA Z.Z TAR package -> Fix URL capitalisation if necessary), branch or tag to use for onnx-tensorrt (https://github.com/onnx/onnx-tensorrt/branches/all or https://github.com/onnx/onnx-tensorrt/tags), Python onnx package version specification to use (e.g. check onnx-tensorrt requirement on onnx, '==1.12.0', '>=1.6'), and whether to explicitly compile TensorRT into PyTorch or just install it into the conda environment
 CFG_TENSORRT_VERSION="${CFG_TENSORRT_VERSION:-}"
 CFG_TENSORRT_URL="${CFG_TENSORRT_URL:-}"
 CFG_TENSORRT_ONNX_TAG="${CFG_TENSORRT_ONNX_TAG:-}"
+CFG_TENSORRT_ONNX_VERSION="${CFG_TENSORRT_ONNX_VERSION:-}"
 CFG_TENSORRT_PYTORCH="${CFG_TENSORRT_PYTORCH:-1}"
 
 # Generate default conda environment name
@@ -145,6 +146,7 @@ echo "CFG_OPENCV_CMAKE = $CFG_OPENCV_CMAKE"
 echo "CFG_TENSORRT_VERSION = $CFG_TENSORRT_VERSION"
 echo "CFG_TENSORRT_URL = $CFG_TENSORRT_URL"
 echo "CFG_TENSORRT_ONNX_TAG = $CFG_TENSORRT_ONNX_TAG"
+echo "CFG_TENSORRT_ONNX_VERSION = $CFG_TENSORRT_ONNX_VERSION"
 echo "CFG_TENSORRT_PYTORCH = $CFG_TENSORRT_PYTORCH"
 echo "CFG_CONDA_CREATE = $CFG_CONDA_CREATE"
 echo "CFG_CONDA_LOAD = $CFG_CONDA_LOAD"
@@ -788,7 +790,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 			fi
 		fi
 		conda install $CFG_AUTO_YES ceres-solver$CERES_VERSION cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
-		[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six onnx protobuf libprotobuf  # For TensorRT
+		[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six "onnx${CFG_TENSORRT_ONNX_VERSION}" protobuf libprotobuf  # For TensorRT
 		conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pyyaml requests six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
 		[[ -n "$CFG_TORCHVISION_TAG" ]] && conda install $CFG_AUTO_YES typing_extensions numpy requests scipy scikit-learn-intelex  # For Torchvision
 		[[ -n "$CFG_TORCHAUDIO_TAG" ]] && conda install $CFG_AUTO_YES numpy scipy scikit-learn-intelex kaldi_io  # For Torchaudio
