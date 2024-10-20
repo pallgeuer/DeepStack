@@ -885,12 +885,12 @@ if [[ "$CFG_CONDA_SAVE" != "0" ]]; then
 	CONDA_SPEC_YML="$CONDA_SPEC_DIR/conda-pytorch-$PYTHON_SPEC-cu$CUDA_SPEC-$TAG_SPEC$DATE_SPEC.yml"
 	CONDA_SPEC_TXT="$CONDA_SPEC_DIR/conda-pytorch-$PYTHON_SPEC-cu$CUDA_SPEC-$TAG_SPEC$DATE_SPEC-explicit.txt"
 	PIP_NODEPS_SPEC="# PIPNODEPS: --no-cache-dir $(pip freeze | egrep "^(pycuda|pytools)==" | tr '\n' ' ' | xargs)"
-	set +u
+	set +eu
 	echo "Saving conda env to: $CONDA_SPEC_YML"
 	{ conda env export | grep -v "^prefix:" | sed '/- pip:/Q'; echo "$PIP_NODEPS_SPEC"; } > "$CONDA_SPEC_YML"
 	echo "Saving conda env to: $CONDA_SPEC_TXT"
 	{ conda list --explicit; echo "$PIP_NODEPS_SPEC"; } > "$CONDA_SPEC_TXT"
-	set -u
+	set -eu
 	echo
 fi
 
