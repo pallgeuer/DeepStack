@@ -689,6 +689,18 @@ add_uninstall_cmds "# $UNINSTALLER_COMMANDS"
 echo "$UNINSTALLER_COMMANDS"
 echo
 
+# Conda/pip command wrapper functions
+function Conda() {
+	echo "EXEC: conda $*"
+	conda "$@"
+	echo
+}
+function Pip() {
+	echo "EXEC: pip $*"
+	pip "$@"
+	echo
+}
+
 # Create conda environment
 echo "Creating conda environment..."
 if [[ "$CFG_CONDA_CREATE" != "1" ]] || find "$(conda info --base)"/envs -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | grep -Fqx "$CFG_CONDA_ENV"; then
@@ -698,9 +710,9 @@ else
 	echo "If you want an existing conda environment to be used instead, then create and configure the environment and pass its name as CFG_CONDA_ENV and set CFG_CONDA_CREATE=0"
 	set +u
 	if [[ -n "$CFG_CONDA_LOAD" ]]; then
-		conda create $CFG_AUTO_YES -n "$CFG_CONDA_ENV" --no-default-packages
+		Conda create $CFG_AUTO_YES -n "$CFG_CONDA_ENV" --no-default-packages
 	else
-		conda create $CFG_AUTO_YES -n "$CFG_CONDA_ENV" python="$CFG_CONDA_PYTHON"
+		Conda create $CFG_AUTO_YES -n "$CFG_CONDA_ENV" python="$CFG_CONDA_PYTHON"
 	fi
 	set -u
 	CREATED_CONDA_ENV=true
@@ -759,25 +771,24 @@ fi
 # Activate the conda environment
 echo "Activating $CFG_CONDA_ENV conda environment..."
 set +u
-conda activate "$CFG_CONDA_ENV"
+Conda activate "$CFG_CONDA_ENV"
 set -u
-echo
 
 # Install conda packages
 if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	echo "Installing conda packages..."
 	set +u
-	conda config --env --append channels conda-forge
-	conda config --env --append channels pytorch
-	conda config --env --set channel_priority flexible
+	Conda config --env --append channels conda-forge
+	Conda config --env --append channels pytorch
+	Conda config --env --set channel_priority flexible
 	if [[ -n "$CFG_CONDA_LOAD" ]]; then
 		if [[ "$CFG_CONDA_LOAD" == *.txt ]]; then
-			conda install $CFG_AUTO_YES -n "$CFG_CONDA_ENV" --file "$CFG_CONDA_LOAD"
+			Conda install $CFG_AUTO_YES -n "$CFG_CONDA_ENV" --file "$CFG_CONDA_LOAD"
 		else
-			conda env update -n "$CFG_CONDA_ENV" --file "$CFG_CONDA_LOAD"
+			Conda env update -n "$CFG_CONDA_ENV" --file "$CFG_CONDA_LOAD"
 		fi
 	else
-		conda install $CFG_AUTO_YES cython
+		Conda install $CFG_AUTO_YES cython
 		CERES_VERSION=
 		if [[ -f "$OPENCV_GIT_DIR/modules/python/package/setup.py" ]]; then
 			OPENCV_VERSION_PARSED="$(grep -oP -m1 "(?<=os\.environ\.get\('OPENCV_VERSION', ')\d+\.\d+\.\d+(?=\w*'\))" < "$OPENCV_GIT_DIR/modules/python/package/setup.py" | head -n1)"
@@ -789,20 +800,20 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 				fi
 			fi
 		fi
-		conda install $CFG_AUTO_YES ceres-solver$CERES_VERSION cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
-		[[ -n "$CFG_TENSORRT_URL" ]] && conda install $CFG_AUTO_YES numpy six "onnx${CFG_TENSORRT_ONNX_VERSION}" protobuf libprotobuf  # For TensorRT
-		conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pyyaml requests six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
-		[[ -n "$CFG_TORCHVISION_TAG" ]] && conda install $CFG_AUTO_YES typing_extensions numpy requests scipy scikit-learn-intelex  # For Torchvision
-		[[ -n "$CFG_TORCHAUDIO_TAG" ]] && conda install $CFG_AUTO_YES numpy scipy scikit-learn-intelex kaldi_io  # For Torchaudio
-		[[ -n "$CFG_TORCHTEXT_TAG" ]] && conda install $CFG_AUTO_YES tqdm numpy requests nltk spacy sacremoses  # For Torchtext
-		conda install $CFG_AUTO_YES decorator appdirs mako numpy six platformdirs  # For pip packages
-		conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python|(open)?blas(-devel)?|)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
-		conda install $CFG_AUTO_YES -c conda-forge libstdcxx-ng libgcc-ng libgfortran-ng libgfortran5
-		conda install $CFG_AUTO_YES setuptools==58.0.4
+		Conda install $CFG_AUTO_YES ceres-solver$CERES_VERSION cmake ffmpeg freetype gflags glog gstreamer gst-plugins-base gst-plugins-good harfbuzz hdf5 jpeg libdc1394 libiconv libpng libtiff libva libwebp mkl mkl-include ninja numpy openjpeg pkgconfig six snappy tbb tbb-devel tbb4py tifffile  # For OpenCV
+		[[ -n "$CFG_TENSORRT_URL" ]] && Conda install $CFG_AUTO_YES numpy six "onnx${CFG_TENSORRT_ONNX_VERSION}" protobuf libprotobuf  # For TensorRT
+		Conda install $CFG_AUTO_YES astunparse cffi cmake future mkl mkl-include ninja numpy pillow pkgconfig pyyaml requests six typing typing_extensions libjpeg-turbo libpng magma-cuda"$(cut -d. -f'1 2' <<< "$CFG_CUDA_VERSION" | tr -d .)"  # For PyTorch
+		[[ -n "$CFG_TORCHVISION_TAG" ]] && Conda install $CFG_AUTO_YES typing_extensions numpy requests scipy scikit-learn-intelex  # For Torchvision
+		[[ -n "$CFG_TORCHAUDIO_TAG" ]] && Conda install $CFG_AUTO_YES numpy scipy scikit-learn-intelex kaldi_io  # For Torchaudio
+		[[ -n "$CFG_TORCHTEXT_TAG" ]] && Conda install $CFG_AUTO_YES tqdm numpy requests nltk spacy sacremoses  # For Torchtext
+		Conda install $CFG_AUTO_YES decorator appdirs mako numpy six platformdirs  # For pip packages
+		Conda install $CFG_AUTO_YES --force-reinstall $(conda list -q --no-pip | egrep -v -e '^#' -e '^_' | cut -d' ' -f1 | egrep -v '^(python|(open)?blas(-devel)?|onnx|)$' | tr '\n' ' ')  # Workaround for conda dependency mismanagement...
+		Conda install $CFG_AUTO_YES -c conda-forge libstdcxx-ng libgcc-ng libgfortran-ng libgfortran5
+		Conda install $CFG_AUTO_YES setuptools==58.0.4
 		CERES_EIGEN_VERSION="$(grep -oP '(?<=set\(CERES_EIGEN_VERSION)\s+[0-9.]+\s*(?=\))' "$CONDA_ENV_DIR/lib/cmake/Ceres/CeresConfig.cmake")"
 		CERES_EIGEN_VERSION="${CERES_EIGEN_VERSION// /}"
 		if [[ -n "$CERES_EIGEN_VERSION" ]]; then
-			conda install $CFG_AUTO_YES eigen="$CERES_EIGEN_VERSION"
+			Conda install $CFG_AUTO_YES eigen="$CERES_EIGEN_VERSION"
 		else
 			echo "Failed to parse Eigen version required by Ceres"
 			exit 1
@@ -815,7 +826,7 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 	echo "Installing pip packages..."
 	if [[ -n "$CFG_CONDA_LOAD" ]]; then
 		while IFS= read -r PIP_NODEPS_ARGS; do
-			pip install --no-deps ${PIP_NODEPS_ARGS:13}
+			Pip install --no-deps ${PIP_NODEPS_ARGS:13}
 		done < <(grep "^# PIPNODEPS: " < "$CFG_CONDA_LOAD")
 	else
 		TYPING_EXTENSIONS_VERSION="$(conda list | grep typing-extensions | head -n1 | xargs | cut -d' ' -f2)"
@@ -825,21 +836,21 @@ if [[ -n "$CREATED_CONDA_ENV" ]]; then
 		else
 			PYTOOLS_VERSION=
 		fi
-		pip install --no-deps --no-cache-dir pycuda pytools$PYTOOLS_VERSION
+		Pip install --no-deps --no-cache-dir pycuda pytools$PYTOOLS_VERSION
 	fi
 	echo
 	if [[ -n "$CFG_TENSORRT_URL" ]]; then
 		echo "Installing TensorRT..."
 		CONDA_PYTHON_CODE="$(sed 's/^\([0-9]\+\)\.\([0-9]\+\).*$/\1\2/' <<< "$CFG_CONDA_PYTHON")"
-		pip install --no-deps "$TENSORRT_INSTALL_DIR/python/$(tr "[:upper:]" "[:lower:]" <<< "$TENSORRT_DIRNAME")-cp$CONDA_PYTHON_CODE-"*.whl
-		pip install --no-deps "$TENSORRT_INSTALL_DIR/uff/uff-"*.whl
-		pip install --no-deps "$TENSORRT_INSTALL_DIR/graphsurgeon/graphsurgeon-"*.whl
-		[[ -d "$TENSORRT_INSTALL_DIR/onnx_graphsurgeon" ]] && pip install --no-deps "$TENSORRT_INSTALL_DIR/onnx_graphsurgeon/onnx_graphsurgeon-"*.whl
+		Pip install --no-deps "$TENSORRT_INSTALL_DIR/python/$(tr "[:upper:]" "[:lower:]" <<< "$TENSORRT_DIRNAME")-cp$CONDA_PYTHON_CODE-"*.whl
+		Pip install --no-deps "$TENSORRT_INSTALL_DIR/uff/uff-"*.whl
+		Pip install --no-deps "$TENSORRT_INSTALL_DIR/graphsurgeon/graphsurgeon-"*.whl
+		[[ -d "$TENSORRT_INSTALL_DIR/onnx_graphsurgeon" ]] && Pip install --no-deps "$TENSORRT_INSTALL_DIR/onnx_graphsurgeon/onnx_graphsurgeon-"*.whl
 		echo
 	fi
 	echo "Performing pip check..."
 	echo -en "\033[0;33m"
-	pip check || true
+	Pip check || true
 	echo -en "\033[0m"
 	echo
 fi
@@ -848,18 +859,16 @@ fi
 if [[ "$CFG_CLEAN_CONDA" == "1" ]]; then
 	echo "Cleaning conda cache..."
 	set +u
-	conda clean $CFG_AUTO_YES --all
+	Conda clean $CFG_AUTO_YES --all
 	set -u
-	echo
 fi
 
 # Reactivate the conda environment
 echo "Reactivating $CFG_CONDA_ENV conda environment..."
 set +u
-conda deactivate
-conda activate "$CFG_CONDA_ENV"
+Conda deactivate
+Conda activate "$CFG_CONDA_ENV"
 set -u
-echo
 
 # Save the environment specifications to file
 if [[ "$CFG_CONDA_SAVE" != "0" ]]; then
